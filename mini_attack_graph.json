@@ -1,0 +1,211 @@
+{
+    "attack_steps": {
+        "Application 1:defense": {
+            "id": 10,
+            "type": "defense",
+            "lang_graph_attack_step": "Application:notPresent",
+            "name": "notPresent",
+            "ttc": {
+                "type": "function",
+                "name": "Disabled",
+                "arguments": []
+            },
+            "children": {
+                "2": "Application 1:successfulUseVulnerability",
+                "8": "Application 1:networkConnectUninspected",
+                "5": "Application 1:successfulReverseReach",
+                "4": "Application 1:attemptReverseReach"
+            },
+            "parents": {},
+            "compromised_by": [],
+            "asset": "Application 1",
+            "defense_status": "0.0",
+            "is_viable": "True",
+            "is_necessary": "False"
+        },
+        "Application 1:notPresent": {
+            "id": 0,
+            "type": "or",
+            "lang_graph_attack_step": "Application:notPresent",
+            "name": "notPresent",
+            "ttc": {
+                "type": "function",
+                "name": "Disabled",
+                "arguments": []
+            },
+            "children": {
+                "2": "Application 1:successfulUseVulnerability",
+                "9": "Application 1:networkConnectInspected"
+            },
+            "parents": {},
+            "compromised_by": [],
+            "asset": "Application 1",
+            "defense_status": "0.0",
+            "is_viable": "True",
+            "is_necessary": "False"
+        },
+        "Application 1:attemptUseVulnerability": {
+            "id": 1,
+            "type": "or",
+            "lang_graph_attack_step": "Application:attemptUseVulnerability",
+            "name": "attemptUseVulnerability",
+            "ttc": null,
+            "children": {
+                "7": "Application 1:networkConnectUninspected",
+                "8": "Application 1:networkConnectUninspected"
+            },
+            "parents": {
+                "2": "Application 1:successfulUseVulnerability"
+            },
+            "compromised_by": [],
+            "asset": "Application 1",
+            "is_viable": "True",
+            "is_necessary": "True",
+            "tags": [
+                "hidden"
+            ]
+        },
+        "Application 1:successfulUseVulnerability": {
+            "id": 2,
+            "type": "and",
+            "lang_graph_attack_step": "Application:successfulUseVulnerability",
+            "name": "successfulUseVulnerability",
+            "ttc": null,
+            "children": {
+                "1": "Application 1:attemptUseVulnerability",
+                "3": "Application 1:useVulnerability"
+            },
+            "parents": {
+                "0": "Application 1:notPresent"
+            },
+            "compromised_by": [],
+            "asset": "Application 1",
+            "is_viable": "True",
+            "is_necessary": "True",
+            "tags": [
+                "hidden"
+            ]
+        },
+        "Application 1:useVulnerability": {
+            "id": 3,
+            "type": "or",
+            "lang_graph_attack_step": "Application:useVulnerability",
+            "name": "useVulnerability",
+            "ttc": null,
+            "children": {},
+            "parents": {
+                "2": "Application 1:successfulUseVulnerability"
+            },
+            "compromised_by": [],
+            "asset": "Application 1",
+            "is_viable": "True",
+            "is_necessary": "True"
+        },
+        "Application 1:attemptReverseReach": {
+            "id": 4,
+            "type": "or",
+            "lang_graph_attack_step": "Application:attemptReverseReach",
+            "name": "attemptReverseReach",
+            "ttc": null,
+            "children": {
+                "5": "Application 1:successfulReverseReach"
+            },
+            "parents": {
+                "9": "Application 1:networkConnectInspected"
+            },
+            "compromised_by": [],
+            "asset": "Application 1",
+            "is_viable": "True",
+            "is_necessary": "True",
+            "tags": [
+                "entrypoint"
+            ]
+        },
+        "Application 1:successfulReverseReach": {
+            "id": 5,
+            "type": "and",
+            "lang_graph_attack_step": "Application:successfulReverseReach",
+            "name": "successfulReverseReach",
+            "ttc": null,
+            "children": {
+                "6": "Application 1:reverseReach"
+            },
+            "parents": {
+                "4": "Application 1:attemptReverseReach"
+            },
+            "compromised_by": [],
+            "asset": "Application 1",
+            "is_viable": "True",
+            "is_necessary": "True",
+            "tags": [
+                "hidden"
+            ]
+        },
+        "Application 1:reverseReach": {
+            "id": 6,
+            "type": "or",
+            "lang_graph_attack_step": "Application:reverseReach",
+            "name": "reverseReach",
+            "ttc": null,
+            "children": {},
+            "parents": {
+                "5": "Application 1:successfulReverseReach"
+            },
+            "compromised_by": [],
+            "asset": "Application 1",
+            "is_viable": "True",
+            "is_necessary": "True",
+            "tags": [
+                "hidden"
+            ]
+        },
+        "Application 1:localConnect": {
+            "id": 7,
+            "type": "or",
+            "lang_graph_attack_step": "Application:localConnect",
+            "name": "localConnect",
+            "ttc": null,
+            "children": {},
+            "parents": {
+                "1": "Application 1:attemptUseVulnerability"
+            },
+            "compromised_by": [],
+            "asset": "Application 1",
+            "is_viable": "True",
+            "is_necessary": "True"
+        },
+        "Application 1:networkConnectUninspected": {
+            "id": 8,
+            "type": "or",
+            "lang_graph_attack_step": "Application:networkConnectUninspected",
+            "name": "networkConnectUninspected",
+            "ttc": null,
+            "children": {},
+            "parents": {
+                "1": "Application 1:attemptUseVulnerability"
+            },
+            "compromised_by": [],
+            "asset": "Application 1",
+            "is_viable": "True",
+            "is_necessary": "True"
+        },
+        "Application 1:networkConnectInspected": {
+            "id": 9,
+            "type": "or",
+            "lang_graph_attack_step": "Application:networkConnectInspected",
+            "name": "networkConnectInspected",
+            "ttc": null,
+            "children": {
+                "4": "Application 1:attemptReverseReach"
+            },
+            "parents": {
+                "0": "Application 1:notPresent"
+            },
+            "compromised_by": [],
+            "asset": "Application 1",
+            "is_viable": "True",
+            "is_necessary": "True"
+        }
+    },
+    "attackers": {}
+}

@@ -206,3 +206,7 @@ class GUISetupAttribute(GUIModelingBlock):
         
     def save_state(self):
         return super().save_state() | {"value": self.__setup_attribute.get_value()}
+
+    # Additions by Lukas Gamard 25/04/03
+    def set_entry_value(self, value):
+        self.__entry_value.set_entry_text(value)

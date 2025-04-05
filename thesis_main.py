@@ -1,12 +1,7 @@
 import tkinter as tk
 import sys
 import os
-
-METAMODEL_YACRAF_1 = 0
-METAMODEL_YACRAF_2 = 1
-
-ATTACK_EVENT_AND = 0
-ATTACK_EVENT_OR = 1
+from thesis_constants import *
 
 sys.path.append("config")
 from program_paths import *
@@ -37,18 +32,10 @@ def main():
     root = tk.Tk()
     model = Model(root, num_setup_views=1)
 
-    attack_graph_file = "attack_graph.json"
-    create_attack_graph(model, attack_graph_file)
+    attack_graph_file = "mini_attack_graph.json"
+    create_attack_graphs(model, attack_graph_file)
     
     setup_view = model.get_setup_views()[0]
-    configuration_view = model.get_configuration_views()[METAMODEL_YACRAF_2]
-    configuration_classes_gui = configuration_view.get_configuration_classes_gui()
-    # avoid stacking
-    positions = get_block_start_coordinates(setup_view.get_length_unit(), num_coordinates=2)
-    setup_view.create_setup_class_gui(configuration_class_gui=configuration_classes_gui[ATTACK_EVENT_AND], position=positions[0])
-    setup_view.create_setup_class_gui(configuration_class_gui=configuration_classes_gui[ATTACK_EVENT_OR], position=positions[1])
-
-    setup_view.create_connection_with_blocks(start_coordinate=positions[0], end_coordinate=positions[1])
     model.change_view(setup_view)
     root.mainloop()
     
