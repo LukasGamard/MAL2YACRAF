@@ -1,9 +1,17 @@
+# allow forward references for type hints
+from __future__ import annotations
+
 import json
 import copy
 import logging
 from tqdm import tqdm
 from queue import SimpleQueue, LifoQueue
-from general_gui import *
+from blocks_gui.setup.setup_class_gui import GUISetupClass
+from views.setup_view import SetupView
+from views.configuration_view import ConfigurationView
+from blocks_gui.configuration.configuration_class_gui import GUIConfigurationClass
+from model import Model
+from blocks_gui.general_gui import *
 from thesis_constants import *
 
 logger = logging.getLogger()
@@ -60,14 +68,29 @@ def file_to_trees(filename: str) -> list:
 
     return trees
 
-def tree_to_setup_view(model, tree):
-    setup_view = model.get_setup_views()[0]
-    configuration_view_main = model.get_configuration_views()[Metamodel.YACRAF_1]
-    configuration_classes_gui_main = configuration_view_main.get_configuration_classes_gui()
-    tree.root.create_setup_class(setup_view, configuration_classes_gui_main)
+def tree_to_setup_view(model: Model, tree: Tree):
+    setup_view_attack_graph = model.get_setup_views()[0]
+    setup_view_defenses = model.get_setup_views()[1]
+    configuration_view_main : ConfigurationView = model.get_configuration_views()[Metamodel.YACRAF_1]
+    configuration_classes_gui_main : list[GUIConfigurationClass]= configuration_view_main.get_configuration_classes_gui()
+    tree.root.create_setup_class(setup_view_attack_graph, configuration_classes_gui_main)
+
+    # plot defenses in another setup view
+    start_position = (0, 0)
     for defense in tree.defenses:
-        defense.create_setup_class(setup_view, configuration_classes_gui_main)
+        defense.create_setup_class(setup_view_defenses, configuration_classes_gui_main, position=start_position, model=model)
+        start_position = (start_position[0] + 2*Units.VERTICAL_PADDING + 2*Units.DEFENSE_MECHANISM_WIDTH, 0)
     
+def set_default_attribute_values(type, setup_class_gui):
+    attributes = setup_class_gui.get_setup_attributes_gui()
+    match type:
+        case String.AND | String.OR:
+            attributes[Attack_event_setup_attribute.LOCAL_DIFFICULTY].set_entry_value("1/2/3") # TODO adapt to actual value
+            return
+        case String.DEFENSE:
+            attributes[Defense_setup_attribute.COST].set_entry_value("10/20/30")
+            attributes[Defense_setup_attribute.IMPACT].set_entry_value("20/30/40")
+
 
 class Tree():
     def __init__(self, position):
@@ -142,7 +165,7 @@ class Node():
         self.ancestors = ancestors
         defense : Node
         if isDefense:
-            return # TODO add children
+            return
         
         for defense in defenses:
             # Look for a defense mechanism for this attack step
@@ -188,36 +211,40 @@ class Node():
         next_spot_on_same_row = (child_position[0] + Units.HORIZONTAL_PADDING, self.grid_position[1])
         return next_spot_on_same_row
     
-    def create_setup_class(self, setup_view, configuration_classes_gui):
+    def create_setup_class(self, setup_view : SetupView, configuration_classes_gui : list[GUIConfigurationClass], position = None, model=None):
         """create the setup representation for the node and add connections to its children"""
         # Create a block
         type = self.attack_step[String.TYPE]
-        position = self.grid_position
-        block : GUISetupClass
+        position = self.grid_position if not position else position # use different position for plotting linked classes in another system_view
+        self.setup_class_gui : GUISetupClass
         if type == String.AND:
-            block = setup_view.create_setup_class_gui(configuration_class_gui=configuration_classes_gui[Configuration_classes_gui.ATTACK_EVENT_AND], position=position)
+            self.setup_class_gui = setup_view.create_setup_class_gui(configuration_class_gui=configuration_classes_gui[Configuration_classes_gui.ATTACK_EVENT_AND], position=position)
         elif type == String.OR:
-            block = setup_view.create_setup_class_gui(configuration_class_gui=configuration_classes_gui[Configuration_classes_gui.ATTACK_EVENT_OR], position=position)
+            self.setup_class_gui = setup_view.create_setup_class_gui(configuration_class_gui=configuration_classes_gui[Configuration_classes_gui.ATTACK_EVENT_OR], position=position)
         elif type == String.DEFENSE:
-            block = setup_view.create_setup_class_gui(configuration_class_gui=configuration_classes_gui[Configuration_classes_gui.DEFENSE_MECHANISM], position=position)
-        block.set_name(self.attack_step[String.NAME])
-        block.update_text()
-        attributes = block.get_setup_attributes_gui()
-        if type == String.AND or type == String.OR:
-            attributes[Attack_event_setup_attribute.LOCAL_DIFFICULTY].set_entry_value("1/2/3") # TODO adapt to actual value
+            self.setup_class_gui = setup_view.create_setup_class_gui(configuration_class_gui=configuration_classes_gui[Configuration_classes_gui.DEFENSE_MECHANISM], position=position)
+        self.setup_class_gui.set_name(self.attack_step[String.NAME])
+        self.setup_class_gui.update_text()
+        set_default_attribute_values(type, self.setup_class_gui)
 
         # Create its children blocks
         child : Node
-        for child in self.children_nodes:
-            if not type == String.DEFENSE:
+        if not type == String.DEFENSE:
+            for child in self.children_nodes:
                 child.create_setup_class(setup_view, configuration_classes_gui)
                 top_left_corner = (self.grid_position[0] - 1, self.grid_position[1] + 0.25)
                 child_top_right_corner = (child.grid_position[0] + Units.ATTACK_EVENT_WIDTH, child.grid_position[1] + 0.25)
                 setup_view.create_connection_with_blocks(start_coordinate=child_top_right_corner, end_coordinate=top_left_corner)
-            else:
-                top_right_corner = (self.grid_position[0] + Units.ATTACK_EVENT_WIDTH, self.grid_position[1] + 0.25)
-                child_top_left_corner = (child.grid_position[0] - 1, child.grid_position[1] + 0.25)
+        elif type == String.DEFENSE:
+            start_position = (position[0] + Units.VERTICAL_PADDING + Units.DEFENSE_MECHANISM_WIDTH, position[1])
+            top_right_corner = (position[0] + Units.DEFENSE_MECHANISM_WIDTH, position[1] + 0.25)
+            for child in self.children_nodes:
+                # stack the children
+                linked_setup_class_gui = model.create_linked_setup_class_gui(child.setup_class_gui, setup_view, position=start_position)
+                set_default_attribute_values(type, linked_setup_class_gui)
+                child_top_left_corner = (start_position[0] - 1, start_position[1] + 0.25)
                 setup_view.create_connection_with_blocks(start_coordinate=top_right_corner, end_coordinate=child_top_left_corner)
+                start_position = (start_position[0], start_position[1] + Units.SIMPLE_VERTICAL_PADDING + Units.ATTACK_EVENT_HEIGHT)
 
     def size(self):
         if not self.children_nodes:

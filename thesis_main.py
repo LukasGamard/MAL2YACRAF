@@ -11,7 +11,7 @@ for path in IMPORT_PATHS:
     sys.path.append(path)
     
 from settings import Settings
-from general_gui import *
+from blocks_gui.general_gui import *
 from thesis_util import *
 
 def main():
