@@ -16,10 +16,18 @@ class Configuration_classes_gui(int, Enum):
 
 
 class String(str, Enum):
-    """String constants used in the attack_graph.json"""
-    NAME = "name"
+    """String constants"""
     NEWLINE = "\n"
+
+    # items in the attack_graph.json
     ATTACK_STEPS = "attack_steps"
+    ATTACKERS = "attackers"
+    ABUSE_CASES = "abuse_cases"
+    LOSS_EVENTS = "loss_events"
+    ACTORS = "actors"
+
+    # attack steps attributes
+    NAME = "name"
     ID = "id"
     ASSET = "asset"
     PARENTS = "parents"
@@ -29,12 +37,33 @@ class String(str, Enum):
     DEFENSE= "defense"
     CHILDREN = "children"
 
+    # attackers attributes
+    PERSONAL_RISK_TOLERANCE = "personal_risk_tolerance"
+    CONCERN_FOR_COLLATERAL_DAMAGE = "concern_for_collateral_damage"
+    SKILL = "skill"
+    RESOURCES = "resources"
+    SPONSORSHIP = "sponsorship"
+
+    # abuse cases attributes
+    WINDOW_OF_OPPORTUNITY = "window_of_opportunity"
+    ABILITY_TO_REPUDOATE = "ability_to_repudiate"
+    PERCEIVED_DETERRENCE = "perceived_deterrence"
+    PERCEIVED_BENEFIT_OF_SUCCESS = "perceived_benefit_of_success"
+
+    # loss events attributes
+    MAGNITUDE = "magnitude"
+
 class Units(int, Enum):
-    """Constants used for plotting in the YACRAF calculator"""
+    """Numerical constants used for plotting in the YACRAF calculator"""
+    # TODO change to universal block width?
     ATTACK_EVENT_WIDTH = 11
     ATTACK_EVENT_HEIGHT = 5
     DEFENSE_MECHANISM_WIDTH = 11
     DEFENSE_MECHANISM_HEIGHT = 3
+    LOSS_EVENT_HEIGHT = 5
+    LOSS_EVENT_WIDTH = 11
+    ABUSE_CASE_HEIGHT = 11
+    ABUSE_CASE_WIDTH = 11
     SIMPLE_VERTICAL_PADDING = 2
     VERTICAL_PADDING = 4
     HORIZONTAL_PADDING = 2

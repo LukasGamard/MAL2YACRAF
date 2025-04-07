@@ -32,13 +32,11 @@ def create_attack_graphs(model, attack_graph_file: str):
     # generate the model
     tree_to_setup_view(model, tree)
 
-
-def file_to_trees(filename: str) -> list:
+def parse_json(filename: str):
     """
-    INPUTS: filename - name of a yaml file containing an attack graph from a compiled MAL DSL
-    OUTPUT: a tree representation of the attack graph
+    INPUTS: path to attack_graph.json
+    OUTPUTS: parsed json ojects representing the different items present in attack_graph.json
     """
-
     with open(filename) as file:
         data = json.load(file)       
         # The json file is a list of attack_steps, each with its children
@@ -47,6 +45,20 @@ def file_to_trees(filename: str) -> list:
         # create a dictionary "id": "attack_step", keeping childless nodes separate
         # use str() because children ids are strings, avoids later typecast
         attack_steps = {str(attack_step[String.ID]): attack_step for name, attack_step in data[String.ATTACK_STEPS].items()}
+        attackers = {str(attacker[String.ID]): attacker for name, attacker in data[String.ATTACKERS].items()}
+        abuse_cases = {str(abuse_case[String.ID]): abuse_case for name, abuse_case in data[String.ABUSE_CASES].items()}
+        loss_events = {str(loss_event[String.ID]): loss_event for name, loss_event in data[String.LOSS_EVENTS].items()}
+        actors = {str(actor[String.ID]): actor for name, actor in data[String.ACTORS].items()}
+ 
+    return attack_steps, attackers, abuse_cases, loss_events, actors
+
+def file_to_trees(filename: str) -> list:
+    """
+    INPUTS: filename - name of a yaml file containing an attack graph from a compiled MAL DSL
+    OUTPUT: a tree representation of the attack graph
+    """
+
+    attack_steps, attackers, abuse_cases, loss_events, actors = parse_json(filename)
 
     # inventory all unique asset names
     assets = set([attack_step[String.ASSET] for id, attack_step in attack_steps.items()])
@@ -59,7 +71,9 @@ def file_to_trees(filename: str) -> list:
     trees = []
     start_position = (0,0)
     for root in roots:
-        tree = Tree(start_position)
+        related_abuse_cases = [abuse_case for id, abuse_case in abuse_cases.items() if root[String.ID] in abuse_case[String.ATTACK_STEPS]]
+        related_loss_events = [loss_event for id, loss_event in loss_events.items() if root[String.ID] in loss_event[String.ATTACK_STEPS]]
+        tree = Tree(start_position, related_abuse_cases, related_loss_events)
         tree.include_defenses(defenses, root[String.ASSET]) # need to add defenses BEFORE adding Nodes
         tree.root = Node(root, attack_steps, defenses=tree.defenses)
         tree.compute_grid_coordinates()
@@ -74,6 +88,7 @@ def tree_to_setup_view(model: Model, tree: Tree):
     configuration_view_main : ConfigurationView = model.get_configuration_views()[Metamodel.YACRAF_1]
     configuration_classes_gui_main : list[GUIConfigurationClass]= configuration_view_main.get_configuration_classes_gui()
     tree.root.create_setup_class(setup_view_attack_graph, configuration_classes_gui_main)
+    # TODO plot AC and LE
 
     # plot defenses in another setup view
     start_position = (0, 0)
@@ -93,16 +108,26 @@ def set_default_attribute_values(type, setup_class_gui):
 
 
 class Tree():
-    def __init__(self, position):
+    def __init__(self, position, abuse_cases, loss_events):
         self.root: Node = None
         self.defenses = list[Node]()
         self.position = position
+        self.abuse_cases = [Node(abuse_case) for abuse_case in abuse_cases]
+        self.loss_events = [Node(loss_event) for loss_event in loss_events]
         self.__width = 1
 
     def compute_grid_coordinates(self):
         self.root.compute_children_grid_coordinates(self.position)
+        # stack abuse_cases and loss_events above the root
+        for i, abuse_case in enumerate(self.abuse_cases):
+            abuse_case.grid_position = (self.position[0] - Units.ABUSE_CASE_WIDTH - Units.HORIZONTAL_PADDING, self.position[1] - i*(Units.ABUSE_CASE_HEIGHT + Units.VERTICAL_PADDING))
+        
+        for i, loss_event in enumerate(self.loss_events):
+            loss_event.grid_position = (self.position[0] + Units.HORIZONTAL_PADDING + Units.LOSS_EVENT_WIDTH, self.position[1] - i*(Units.LOSS_EVENT_HEIGHT + Units.VERTICAL_PADDING))
+        
         for i, defense in enumerate(self.defenses):
-            defense.grid_position = (-Units.DEFENSE_MECHANISM_WIDTH - 2 * Units.HORIZONTAL_PADDING, i * (Units.DEFENSE_MECHANISM_HEIGHT + Units.VERTICAL_PADDING))
+            # position for plotting in a separate setup view
+            defense.grid_position = (i*(Units.DEFENSE_MECHANISM_WIDTH + 2 * Units.HORIZONTAL_PADDING + Units.ATTACK_EVENT_WIDTH), 0)
 
     def include_defenses(self, defenses, asset):
         if self.root:
@@ -159,20 +184,23 @@ class Tree():
         return self.root.width()
 
 class Node():
-    def __init__(self, attack_step, attack_steps=None, ancestors=[], isDefense=False, defenses=None):
+    def __init__(self, attack_step, attack_steps=None, ancestors=[], children_nodes=[], defenses=None):
+        # TODO rename attack_step
         self.attack_step = attack_step
-        self.children_nodes = []
+        self.children_nodes = children_nodes
         self.ancestors = ancestors
+
         defense : Node
-        if isDefense:
+        if attack_step[String.TYPE] == String.DEFENSE:
             return
         
-        for defense in defenses:
-            # Look for a defense mechanism for this attack step
-            if str(self.attack_step[String.ID]) in defense.attack_step[String.CHILDREN]:
-                defense.children_nodes.append(self)
-        if self.attack_step[String.CHILDREN]:
-            self.__add_children_nodes(attack_steps, defenses)
+        if attack_step[String.TYPE] == (String.OR | String.AND):
+            for defense in defenses:
+                # Look for a defense mechanism for this attack step
+                if str(self.attack_step[String.ID]) in defense.attack_step[String.CHILDREN]:
+                    defense.children_nodes.append(self)
+            if self.attack_step[String.CHILDREN]:
+                self.__add_children_nodes(attack_steps, defenses)
 
     def __add_children_nodes(self, attack_steps, defenses):
         """recursive bottom-up process to pull and connect children attack_steps"""
@@ -241,7 +269,7 @@ class Node():
             for child in self.children_nodes:
                 # stack the children
                 linked_setup_class_gui = model.create_linked_setup_class_gui(child.setup_class_gui, setup_view, position=start_position)
-                set_default_attribute_values(type, linked_setup_class_gui)
+                set_default_attribute_values(child.attack_step[String.TYPE], linked_setup_class_gui)
                 child_top_left_corner = (start_position[0] - 1, start_position[1] + 0.25)
                 setup_view.create_connection_with_blocks(start_coordinate=top_right_corner, end_coordinate=child_top_left_corner)
                 start_position = (start_position[0], start_position[1] + Units.SIMPLE_VERTICAL_PADDING + Units.ATTACK_EVENT_HEIGHT)

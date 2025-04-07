@@ -207,5 +207,55 @@
             "is_necessary": "True"
         }
     },
-    "attackers": {}
+    "attackers": {
+        "Hacktivist": {
+            "id": 0,
+            "personal_risk_tolerance": 5,
+            "concern_for_collateral_damage": 5,
+            "skill": 5,
+            "resources": 5,
+            "sponsorship": 0,
+            "abuse_cases": {
+                "0": "Block video streaming"
+            }
+        }
+    },
+    "abuse cases": {
+        "Block video streaming": {
+            "id": 0,
+            "window_of_opportunity": 0,
+            "ability_to_repudiate": 0,
+            "perceived_deterrence": 10,
+            "perceived_ease_of_attack": 0,
+            "perceived_benefit_of_success": 5,
+            "attackers": {
+                "0": "Hacktivist"
+            },
+            "attack_steps": {
+                "0": "Application 1:notPresent"
+            },
+            "loss_events": {
+                "0": "Videos unavailable"
+            }
+        }
+    },
+    "loss events": {
+        "Videos unavailable": {
+            "id": 0,
+            "type": ["productivity", "financial"],
+            "magnitude": [0.2, 1, 1.4]
+        },
+        "attack_steps": {
+            "0":"Application 1:notPresent"
+        },
+        "actors": {
+            "0": "User"
+        }
+    },
+    "actors": {
+        "User": {
+            "id": 0,
+            "type": "external"
+        }
+    }
 }
