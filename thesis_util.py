@@ -4,8 +4,6 @@ from __future__ import annotations
 import json
 import logging
 from tqdm import tqdm
-from views.configuration_view import ConfigurationView
-from blocks_gui.configuration.configuration_class_gui import GUIConfigurationClass
 from model import Model
 from blocks_gui.general_gui import *
 from thesis_constants import *
@@ -26,9 +24,7 @@ def create_attack_graphs(model, attack_graph_file: str):
     attack_trees : list[Tree] = file_to_trees(attack_graph_file)
     tree = attack_trees[0]
     print(f"{tree.size()=} {tree.width()=}")
-    #a=1
-    # generate the model
-    tree_to_setup_view(model, tree)
+    tree.plot(model)
 
 def parse_json(filename: str) -> tuple[
     dict[str, Any],  # attack_steps
@@ -82,27 +78,8 @@ def file_to_trees(filename: str) -> list:
         tree.include_defenses(defenses, root[String.ASSET]) # need to add defenses BEFORE adding Nodes
         tree.build(root, attack_steps)
         tree.compute_grid_coordinates()
-        start_position = (tree.get_width(), 0)
+        start_position = (tree.width(), 0)
         trees.append(tree)
 
     return trees
-
-def tree_to_setup_view(model: Model, tree: Tree):
-    setup_view_attack_graph = model.get_setup_views()[0]
-    setup_view_defenses = model.get_setup_views()[1]
-    configuration_view_main : ConfigurationView = model.get_configuration_views()[Metamodel.YACRAF_1]
-    configuration_classes_gui_main : list[GUIConfigurationClass]= configuration_view_main.get_configuration_classes_gui()
-    tree.root.create_setup_class(setup_view_attack_graph, configuration_classes_gui_main)
-    # stack abuse cases and loss event above the attack tree
-    for abuse_case in tree.abuse_cases:
-        abuse_case.create_setup_class(setup_view_attack_graph, configuration_classes_gui_main)
-    for loss_event in tree.loss_events:
-        loss_event.create_setup_class(setup_view_attack_graph, configuration_classes_gui_main)
-    # TODO plot actors
-
-    # plot defenses in another setup view
-    start_position = (0, 0)
-    for defense in tree.defenses:
-        defense.create_setup_class(setup_view_defenses, configuration_classes_gui_main, position=start_position, model=model)
-        start_position = (start_position[0] + 2*Units.VERTICAL_PADDING + 2*Units.DEFENSE_MECHANISM_WIDTH, 0)
 
