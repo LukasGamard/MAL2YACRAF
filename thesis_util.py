@@ -10,6 +10,7 @@ from model import Model
 from blocks_gui.general_gui import *
 from thesis_constants import *
 from Tree import Tree
+from typing import Any
 
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
@@ -29,7 +30,13 @@ def create_attack_graphs(model, attack_graph_file: str):
     # generate the model
     tree_to_setup_view(model, tree)
 
-def parse_json(filename: str):
+def parse_json(filename: str) -> tuple[
+    dict[str, Any],  # attack_steps
+    list[dict[str, Any]],  # attackers
+    list[dict[str, Any]],  # abuse_cases
+    list[dict[str, Any]],  # loss_events
+    list[dict[str, Any]]   # actors
+]:
     """
     INPUTS: path to attack_graph.json
     OUTPUTS: parsed json ojects representing the different items present in attack_graph.json
@@ -39,13 +46,13 @@ def parse_json(filename: str):
         # The json file is a list of attack_steps, each with its children
         # We want to reorganize this into a tree
 
-        # create a dictionary "id": "attack_step", keeping childless nodes separate
+        # create a dictionary "id": "attack_step", keeping childless nodes separate. Used in AttackStep.__add_children_nodes()
         # use str() because children ids are strings, avoids later typecast
-        attack_steps = {str(attack_step[String.ID]): attack_step for name, attack_step in data[String.ATTACK_STEPS].items()}
-        attackers = {str(attacker[String.ID]): attacker for name, attacker in data[String.ATTACKERS].items()}
-        abuse_cases = {str(abuse_case[String.ID]): abuse_case for name, abuse_case in data[String.ABUSE_CASES].items()}
-        loss_events = {str(loss_event[String.ID]): loss_event for name, loss_event in data[String.LOSS_EVENTS].items()}
-        actors = {str(actor[String.ID]): actor for name, actor in data[String.ACTORS].items()}
+        attack_steps ={str(attack_step[String.ID]): attack_step for name, attack_step in data[String.ATTACK_STEPS].items()}
+        attackers =   [attacker for name, attacker in data[String.ATTACKERS].items()]
+        abuse_cases = [abuse_case for name, abuse_case in data[String.ABUSE_CASES].items()]
+        loss_events = [loss_event for name, loss_event in data[String.LOSS_EVENTS].items()]
+        actors = [actor for name, actor in data[String.ACTORS].items()]
  
     return attack_steps, attackers, abuse_cases, loss_events, actors
 
@@ -57,19 +64,20 @@ def file_to_trees(filename: str) -> list:
 
     attack_steps, attackers, abuse_cases, loss_events, actors = parse_json(filename)
 
-    # inventory all unique asset names
+    # inventory all unique asset names TODO remove?
     assets = set([attack_step[String.ASSET] for id, attack_step in attack_steps.items()])
 
     # for each asset, build full attack trees
     # start from a root and spread to children upon addition of any new node
-    roots = [atk_step for id, atk_step in attack_steps.items() if not atk_step[String.PARENTS] and not atk_step[String.TYPE] == String.DEFENSE]
-    defenses = [atk_step for id, atk_step in attack_steps.items() if atk_step[String.TYPE] == String.DEFENSE]
+    roots = [attack_step for id, attack_step in attack_steps.items() if not attack_step[String.PARENTS] and not attack_step[String.TYPE] == String.DEFENSE]
+    defenses = [attack_step for id, attack_step in attack_steps.items() if attack_step[String.TYPE] == String.DEFENSE]
 
     trees = []
     start_position = (0,0)
     for root in roots:
-        related_abuse_cases = [abuse_case for id, abuse_case in abuse_cases.items() if str(root[String.ID]) in abuse_case[String.ATTACK_STEPS]]
-        related_loss_events = [loss_event for id, loss_event in loss_events.items() if str(root[String.ID]) in loss_event[String.ATTACK_STEPS]]
+        related_abuse_cases = [abuse_case for abuse_case in abuse_cases if str(root[String.ID]) in abuse_case[String.ATTACK_STEPS]]
+        related_loss_events = [loss_event for loss_event in loss_events if str(root[String.ID]) in loss_event[String.ATTACK_STEPS]]
+
         tree = Tree(start_position, related_abuse_cases, related_loss_events)
         tree.include_defenses(defenses, root[String.ASSET]) # need to add defenses BEFORE adding Nodes
         tree.build(root, attack_steps)
