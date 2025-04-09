@@ -26,7 +26,7 @@ class String(str, Enum):
     LOSS_EVENTS = "loss_events"
     ACTORS = "actors"
 
-    # attack steps attributes
+    # attack step's attributes
     NAME = "name"
     ID = "id"
     ASSET = "asset"
@@ -37,21 +37,25 @@ class String(str, Enum):
     DEFENSE= "defense"
     CHILDREN = "children"
 
-    # attackers attributes
+    # attacker's attributes
     PERSONAL_RISK_TOLERANCE = "personal_risk_tolerance"
     CONCERN_FOR_COLLATERAL_DAMAGE = "concern_for_collateral_damage"
     SKILL = "skill"
     RESOURCES = "resources"
     SPONSORSHIP = "sponsorship"
 
-    # abuse cases attributes
+    # abuse case's attributes
     WINDOW_OF_OPPORTUNITY = "window_of_opportunity"
     ABILITY_TO_REPUDOATE = "ability_to_repudiate"
     PERCEIVED_DETERRENCE = "perceived_deterrence"
     PERCEIVED_BENEFIT_OF_SUCCESS = "perceived_benefit_of_success"
 
-    # loss events attributes
+    # loss event's attributes
     MAGNITUDE = "magnitude"
+
+    # actor's attribute's values
+    EXTERNAL = "external"
+    INTERNAL = "internal"
 
 class Units(int, Enum):
     """Numerical constants used for plotting in the YACRAF calculator"""
@@ -60,9 +64,9 @@ class Units(int, Enum):
     ATTACK_EVENT_HEIGHT = 5
     DEFENSE_MECHANISM_WIDTH = 11
     DEFENSE_MECHANISM_HEIGHT = 3
-    LOSS_EVENT_HEIGHT = 5
+    LOSS_EVENT_HEIGHT = 3
     LOSS_EVENT_WIDTH = 11
-    ABUSE_CASE_HEIGHT = 11
+    ABUSE_CASE_HEIGHT = 8
     ABUSE_CASE_WIDTH = 11
     SIMPLE_VERTICAL_PADDING = 2
     VERTICAL_PADDING = 4

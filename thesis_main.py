@@ -2,7 +2,7 @@ import tkinter as tk
 import sys
 import os
 from thesis_constants import *
-
+# TODO prettify imports (make everything a python package)
 sys.path.append("config")
 from program_paths import *
 
@@ -13,6 +13,7 @@ for path in IMPORT_PATHS:
 from settings import Settings
 from blocks_gui.general_gui import *
 from thesis_util import *
+from model import Model
 
 def main():
     if len(sys.argv) != 2 and False:
@@ -26,8 +27,6 @@ def main():
     
     settings = Settings(save_name)
     settings.save()
-    
-    from model import Model
     
     root = tk.Tk()
     model = Model(root, num_setup_views=1)

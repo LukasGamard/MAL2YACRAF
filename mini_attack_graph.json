@@ -209,6 +209,7 @@
     },
     "attackers": {
         "Hacktivist": {
+            "name": "Hacktivist",
             "id": 0,
             "personal_risk_tolerance": 5,
             "concern_for_collateral_damage": 5,
@@ -220,8 +221,9 @@
             }
         }
     },
-    "abuse cases": {
+    "abuse_cases": {
         "Block video streaming": {
+            "name": "Block video streaming",
             "id": 0,
             "window_of_opportunity": 0,
             "ability_to_repudiate": 0,
@@ -239,21 +241,23 @@
             }
         }
     },
-    "loss events": {
+    "loss_events": {
         "Videos unavailable": {
+            "name": "Videos unavailable",
             "id": 0,
             "type": ["productivity", "financial"],
-            "magnitude": [0.2, 1, 1.4]
-        },
-        "attack_steps": {
-            "0":"Application 1:notPresent"
-        },
-        "actors": {
-            "0": "User"
+            "magnitude": [0.2, 1, 1.4],
+            "attack_steps": {
+                "0":"Application 1:notPresent"
+            },
+            "actors": {
+                "0": "User"
+            }
         }
     },
     "actors": {
         "User": {
+            "name": "User",
             "id": 0,
             "type": "external"
         }
