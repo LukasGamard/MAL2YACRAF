@@ -209,7 +209,21 @@
     },
     "attackers": {
         "Hacktivist": {
-            "name": "Hacktivist",
+            "name": "Attacker:Hacktivist",
+            "entry_points": {
+                "Hardware:1": {
+                    "asset_id": 1,
+                    "attack_steps": [
+                        "attemptSupplyChainAttack"
+                    ]
+                },
+                "SoftwareProduct:2": {
+                    "asset_id": 2,
+                    "attack_steps": [
+                        "compromiseApplications"
+                    ]
+                }
+            },
             "id": 0,
             "personal_risk_tolerance": 5,
             "concern_for_collateral_damage": 5,
