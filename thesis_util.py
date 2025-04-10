@@ -7,7 +7,7 @@ from tqdm import tqdm
 from model import Model
 from blocks_gui.general_gui import *
 from thesis_constants import *
-from Tree import Tree
+from YacrafModel import YacrafModel
 from typing import Any
 
 logger = logging.getLogger()
@@ -21,7 +21,7 @@ def create_attack_graphs(model, attack_graph_file: str):
     """
 
     # read the file into a tree representation
-    attack_trees : list[Tree] = file_to_trees(attack_graph_file)
+    attack_trees : list[YacrafModel] = file_to_trees(attack_graph_file)
     tree = attack_trees[0]
     #print(f"{tree.size()=} {tree.width()=}")
     tree.plot(model)
@@ -74,9 +74,9 @@ def file_to_trees(filename: str) -> list:
         related_loss_events = [loss_event for loss_event in loss_events if str(root[String.ID]) in loss_event[String.ATTACK_STEPS]]
         related_defenses = [attack_event for id, attack_event in attack_events.items() if attack_event[String.TYPE] == String.DEFENSE and root[String.ASSET] == attack_event[String.ASSET]]
 
-        tree = Tree(start_position, related_defenses, related_abuse_cases, related_loss_events, attackers, actors)
+        tree = YacrafModel(related_defenses, related_abuse_cases, related_loss_events, attackers, actors)
         tree.build(root, attack_events)
-        tree.compute_grid_coordinates()
+        tree.compute_grid_coordinates(start_position)
         #start_position = (tree.width(), 0)
         trees.append(tree)
 
