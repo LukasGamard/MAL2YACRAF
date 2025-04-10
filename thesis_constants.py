@@ -17,6 +17,7 @@ class Configuration_classes_gui(int, Enum):
 
 class String(str, Enum):
     """String constants"""
+    # TODO split by usecase
     NEWLINE = "\n"
 
     # items in the attack_graph.json
@@ -49,9 +50,11 @@ class String(str, Enum):
     ABILITY_TO_REPUDOATE = "ability_to_repudiate"
     PERCEIVED_DETERRENCE = "perceived_deterrence"
     PERCEIVED_BENEFIT_OF_SUCCESS = "perceived_benefit_of_success"
+    ATTACKER = "attacker"
 
     # loss event's attributes
     MAGNITUDE = "magnitude"
+    ACTOR = "actor"
 
     # actor's attribute's values
     EXTERNAL = "external"

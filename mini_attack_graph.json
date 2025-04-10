@@ -244,7 +244,7 @@
             "perceived_deterrence": 10,
             "perceived_ease_of_attack": 0,
             "perceived_benefit_of_success": 5,
-            "attackers": {
+            "attacker": {
                 "0": "Hacktivist"
             },
             "attack_steps": {
@@ -264,8 +264,11 @@
             "attack_steps": {
                 "0":"Application 1:notPresent"
             },
-            "actors": {
+            "actor": {
                 "0": "User"
+            },
+            "abuse_cases": {
+                "0": "Block video streaming"
             }
         }
     },
@@ -273,7 +276,10 @@
         "User": {
             "name": "User",
             "id": 0,
-            "type": "external"
+            "type": "external",
+            "loss_events": {
+                "0": "Videos unavailable"
+            }
         }
     }
 }
