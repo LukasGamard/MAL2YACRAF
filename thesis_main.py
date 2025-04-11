@@ -30,6 +30,10 @@ def main():
     
     root = tk.Tk()
     model = Model(root, num_setup_views=1)
+    # clean up the default model
+    setup_views = model.get_setup_views()
+    for setup_view in setup_views:
+        model.delete_view(setup_view)
 
     attack_graph_file = "mini_attack_graph.json"
     create_attack_graphs(model, attack_graph_file)

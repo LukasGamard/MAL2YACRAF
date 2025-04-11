@@ -5,6 +5,7 @@ from blocks_gui.setup.setup_class_gui import GUISetupClass
 from views.setup_view import SetupView
 from views.configuration_view import ConfigurationView
 from blocks_gui.configuration.configuration_class_gui import GUIConfigurationClass
+from typing import Any
 import copy
 from model import Model
  
@@ -18,7 +19,7 @@ def set_default_attribute_values(type, setup_class_gui):
             attributes[Defense_setup_attribute.COST].set_entry_value("10/20/30")
             attributes[Defense_setup_attribute.IMPACT].set_entry_value("20/30/40")
 
-class YacrafModel():
+class YacrafModel:
     def __init__(self, defenses, abuse_cases, loss_events, attackers, actors):
         """Initialize the tree by positioning it on the screen and adding abuse cases and loss events"""
         self.__root: AttackEvent = None
@@ -38,7 +39,7 @@ class YacrafModel():
             # link the root and abuse case
             abuse_case.attack_events.append(self.__root)
             # link attacker and abuse case
-            id = abuse_case.data[String.ATTACKER]
+            id = next(iter(abuse_case.data[String.ATTACKER]))
             for attacker in self.attackers:
                 if str(attacker.data[String.ID]) == id:
                     abuse_case.attacker = attacker
@@ -62,49 +63,58 @@ class YacrafModel():
                         actor.loss_events.append(loss_event)
                         # We do not want to break. Check for validity of the model later instead.
 
-        
-
     def compute_grid_coordinates(self, position):
         """Compute the grid coordinates for the tree elements"""
-        # the root is at the position defined for the tree
         self.position = position
-        self.__root.compute_children_grid_coordinates(self.position)
+        # Recursively compute grid positions for the attack tree
+        self.__root.compute_attack_tree_grid_coordinates(self.position)
 
-        # stack abuse_cases and loss_events above the root
-        for i, abuse_case in enumerate(self.abuse_cases):
-            abuse_case.grid_position = (self.position[0] - Units.ABUSE_CASE_WIDTH - 2*Units.HORIZONTAL_PADDING, self.position[1] - (i+1)*(Units.ABUSE_CASE_HEIGHT + Units.VERTICAL_PADDING))
-        
-        for i, loss_event in enumerate(self.loss_events):
-            loss_event.grid_position = (self.position[0] + Units.LOSS_EVENT_WIDTH + 2*Units.HORIZONTAL_PADDING, self.position[1] - (i+1)*(Units.LOSS_EVENT_HEIGHT + Units.VERTICAL_PADDING))
-        
+        # Recursively compute grid positions for the risk tree
+        for actor in self.actors:
+            actor.compute_risk_tree_grid_coordinates()
+
         for i, defense in enumerate(self.defenses):
-            # position for plotting in a separate setup view
-            defense.grid_position = (i*(Units.DEFENSE_MECHANISM_WIDTH + 2 * Units.HORIZONTAL_PADDING + Units.ATTACK_EVENT_WIDTH), 0)
+            # position for plotting in the defense mechanism view
+            defense.grid_position = (i*(Defense.width + AttackEvent.width + 2*Node.Padding.X), 0)
 
     def plot(self, model: Model):
-        # TODO create setup_views on demand
-        setup_view_attack_graph = model.get_setup_views()[0]
-        setup_view_defenses = model.get_setup_views()[1]
-        setup_view_risk = model.get_setup_views()[2]
+        setup_view_attack_tree : SetupView = model.create_view(False, f"Attack Tree: {self.__root.data[String.NAME]}")
+        setup_view_defenses : SetupView = model.create_view(False, f"Defense Mechanisms: {self.__root.data[String.NAME]}")
 
         configuration_view_main : ConfigurationView = model.get_configuration_views()[Metamodel.YACRAF_1]
         configuration_classes_gui_main : list[GUIConfigurationClass]= configuration_view_main.get_configuration_classes_gui()
         
-        ## create the node representations in the corresponding setup views
-        self.__root.create_setup_class(setup_view_attack_graph, configuration_classes_gui_main)
-        # stack abuse cases and loss event above the attack tree
-        for abuse_case in self.abuse_cases:
-            abuse_case.create_setup_class(setup_view_attack_graph, configuration_classes_gui_main)
-        for loss_event in self.loss_events:
-            loss_event.create_setup_class(setup_view_attack_graph, configuration_classes_gui_main)
+        ## create the attack tree
+        self.__root.create_setup_class(setup_view_attack_tree, configuration_classes_gui_main)
 
-
-        # plot defenses in another setup view
+        ## plot the risk tree
+        # one setup view per actor
         start_position = (0, 0)
-        for defense in self.defenses:
-            defense.create_setup_class(setup_view_defenses, configuration_classes_gui_main, position=start_position, model=model)
-            start_position = (start_position[0] + 2*Units.VERTICAL_PADDING + 2*Units.DEFENSE_MECHANISM_WIDTH, 0)
+        for actor in self.actors:
+            setup_view_risk = model.create_view(False, f"Risk for {actor.data[String.NAME]}")
+            actor.create_setup_class(setup_view_risk, configuration_classes_gui_main)
         
+        # stack abuse cases and loss event above the attack tree
+        root_top_left_corner = self.__root.get_top_left_corner()
+        root_top_right_corner = self.__root.get_top_right_corner()
+        for i, abuse_case in enumerate(self.abuse_cases):
+            abuse_case_position = (self.__root.grid_position[0] - AbuseCase.width - 2*Node.Padding.X, self.__root.grid_position[1] - (i+1)*(AbuseCase.height + Node.Padding.Y))
+            model.create_linked_setup_class_gui(abuse_case.setup_class_gui, setup_view_attack_tree, position=abuse_case_position)
+            abuse_case_top_right_corner = Node.get_top_right_corner(abuse_case_position)
+            setup_view_attack_tree.create_connection_with_blocks(start_coordinate=abuse_case_top_right_corner, end_coordinate=root_top_left_corner)
+
+        for i, loss_event in enumerate(self.loss_events):
+            loss_event_position = (self.__root.grid_position[0] + AttackEvent.width + 2*Node.Padding.X, self.__root.grid_position[1] - (i+1)*(LossEvent.height + Node.Padding.Y))
+            model.create_linked_setup_class_gui(loss_event.setup_class_gui, setup_view_attack_tree, position=loss_event_position)
+            loss_event_top_left_corner = Node.get_top_left_corner(loss_event_position)
+            setup_view_attack_tree.create_connection_with_blocks(start_coordinate=root_top_right_corner, end_coordinate=loss_event_top_left_corner)
+
+
+        ## plot defenses in another setup view
+        for defense in self.defenses:
+            defense.create_setup_class(setup_view_defenses, configuration_classes_gui_main, model=model)
+        
+
         def isValid():
             # TODO verify that all multiplicities in YACRAF are satisfied
             return True
@@ -135,10 +145,25 @@ class YacrafModel():
         return self.__root.width()
 """
 
-class Node():
+class Node:
+    """Base class for all nodes in the YACRAF model"""
+    class Offset:
+        """Offsets used for the connecting nodes"""
+        X = 1.0
+        Y = 0.25
+
+    class Padding:
+        """Padding used for the connecting nodes"""
+        X = 2
+        Y = 4
+
+    width = 11
+    height = 1
+
     def __init__(self, data):
-        self.data = data
-        self.grid_position = None
+        self.data : dict[str, Any] = data
+        self.grid_position : tuple[int, int]= None
+        self.setup_class_gui : GUISetupClass
 
     def __repr__(self):
         return f"{self.data[String.ID]}"
@@ -153,6 +178,26 @@ class Node():
         # Create eventual children blocks and connections       
         pass
 
+    @staticmethod
+    def get_top_left_corner(position):
+        """Get the top left corner of the node in order to draw a connection"""
+        return (position[0] - Node.Offset.X, position[1] + Node.Offset.Y)
+    
+    @staticmethod
+    def get_top_right_corner(position):
+        """Get the top right corner of the node in order to draw a connection"""
+        return (position[0] + Node.width, position[1] + Node.Offset.Y)
+    
+    @staticmethod
+    def get_top_middle(position):
+        """Get the top middle of the node in order to draw a connection"""
+        return (position[0] + Node.width/2, position[1] + Node.Offset.Y)
+    
+    @staticmethod
+    def get_bottom_middle(position):
+        """Get the bottom middle of the node in order to draw a connection"""
+        return (position[0] + Node.width/2, position[1] + Node.height + Node.Offset.Y)
+    
 """
     def size(self):
         if not self.children_nodes:
@@ -166,12 +211,13 @@ class Node():
 """
 
 class AttackEvent(Node):
+    height = 5
+
     def __init__(self, data, attack_events=None, ancestors=None, defenses=None):
         """Recursively build the tree that has this Node as its root"""
         super().__init__(data)
-        self.children_attack_events = []
+        self.children_attack_events : list[AttackEvent]= []
         self.ancestors : list[int] = ancestors if ancestors else []
-
 
         # Look for defense mechanisms for this attack step
         defense : Defense
@@ -195,7 +241,7 @@ class AttackEvent(Node):
             child = AttackEvent(attack_events[id], attack_events, ancestors=ancestors, defenses=defenses)
             self.children_attack_events.append(child)
 
-    def compute_children_grid_coordinates(self, position):
+    def compute_attack_tree_grid_coordinates(self, position):
         """
         Place every node in a grid. Every level is left-justified. The root is on top.
         Depth-first 'in-order' algorithm
@@ -204,22 +250,20 @@ class AttackEvent(Node):
         """
         self.grid_position = position
         if not self.children_attack_events:
-            next_spot_on_same_row = (self.grid_position[0] + Units.ATTACK_EVENT_WIDTH + Units.HORIZONTAL_PADDING, self.grid_position[1])
+            next_spot_on_same_row = (self.grid_position[0] + AttackEvent.width + Node.Padding.X, self.grid_position[1])
             return next_spot_on_same_row
-        child_node: AttackEvent
-        child_position = (self.grid_position[0], self.grid_position[1] + Units.ATTACK_EVENT_HEIGHT + Units.VERTICAL_PADDING)
+        next_available_child_position = (self.grid_position[0], self.grid_position[1] + AttackEvent.height + Node.Padding.Y)
         for child_node in self.children_attack_events:
-            child_position = child_node.compute_children_grid_coordinates(child_position)
-        next_spot_on_same_row = (child_position[0] + Units.HORIZONTAL_PADDING, self.grid_position[1])
+            next_available_child_position = child_node.compute_attack_tree_grid_coordinates(next_available_child_position)
+        next_spot_on_same_row = (next_available_child_position[0] + Node.Padding.X, self.grid_position[1])
         return next_spot_on_same_row
     
-    def create_setup_class(self, setup_view : SetupView, configuration_classes_gui : list[GUIConfigurationClass], position = None, model=None):
+    def create_setup_class(self, setup_view : SetupView, configuration_classes_gui : list[GUIConfigurationClass], position = None):
         """create the setup representation for the node and add connections to its children"""
         # Create a block
         type = self.data[String.TYPE]
         position = self.grid_position if not position else position # use different position for plotting linked classes in another system_view
         
-        self.setup_class_gui : GUISetupClass
         if type == String.AND: # attack event AND
             self.setup_class_gui = setup_view.create_setup_class_gui(configuration_class_gui=configuration_classes_gui[Configuration_classes_gui.ATTACK_EVENT_AND], position=position)
         elif type == String.OR: # attack event OR
@@ -233,52 +277,206 @@ class AttackEvent(Node):
         child : AttackEvent
         for child in self.children_attack_events:
             child.create_setup_class(setup_view, configuration_classes_gui)
-            top_left_corner = (self.grid_position[0] - 1, self.grid_position[1] + 0.25)
-            child_top_right_corner = (child.grid_position[0] + Units.ATTACK_EVENT_WIDTH, child.grid_position[1] + 0.25)
-            setup_view.create_connection_with_blocks(start_coordinate=child_top_right_corner, end_coordinate=top_left_corner)
-        
+            setup_view.create_connection_with_blocks(start_coordinate=child.get_top_right_corner(), end_coordinate=self.get_top_left_corner())
+
+    def get_top_left_corner(self):
+        """Get the top left corner of the node in order to draw a connection"""
+        return (self.grid_position[0] - Node.Offset.X, self.grid_position[1] + Node.Offset.Y)
+    
+    def get_top_right_corner(self):
+        """Get the top right corner of the node in order to draw a connection"""
+        return (self.grid_position[0] + AttackEvent.width, self.grid_position[1] + Node.Offset.Y)
+    
+    def get_top_middle(self):
+        """Get the top middle of the node in order to draw a connection"""
+        return (self.grid_position[0] + Node.width/2, self.grid_position[1] - Node.Offset.Y)
+    
+    def get_bottom_middle(self):
+        """Get the bottom middle of the node in order to draw a connection"""
+        return (self.grid_position[0] + Node.width/2, self.grid_position[1] + AttackEvent.height - Node.Offset.Y)
+  
 
 class Defense(Node):
+    height = 3
+
     def __init__(self, data):
         super().__init__(data)
         
         # Attack steps add themselves to this list upon instantiation
-        self.children_attack_events = []
+        self.children_attack_events : list[AttackEvent] = []
 
-    def create_setup_class(self, setup_view : SetupView, configuration_classes_gui : list[GUIConfigurationClass], position = None, model : Model=None):
+    def create_setup_class(self, setup_view : SetupView, configuration_classes_gui : list[GUIConfigurationClass], model : Model=None):
         """create the setup representation for the node and add connections to its children"""
         # Create a block
-        position = self.grid_position if not position else position # use different position for plotting linked classes in another system_view
-        
         self.setup_class_gui : GUISetupClass
-        self.setup_class_gui = setup_view.create_setup_class_gui(configuration_class_gui=configuration_classes_gui[Configuration_classes_gui.DEFENSE_MECHANISM], position=position)
+        self.setup_class_gui = setup_view.create_setup_class_gui(configuration_class_gui=configuration_classes_gui[Configuration_classes_gui.DEFENSE_MECHANISM], position=self.grid_position)
 
         self.setup_class_gui.set_name(self.data[String.NAME])
         self.setup_class_gui.update_text()
         set_default_attribute_values(type, self.setup_class_gui)
 
         # Create eventual children blocks and connections
-        child : AttackEvent
-        start_position = (position[0] + Units.VERTICAL_PADDING + Units.DEFENSE_MECHANISM_WIDTH, position[1])
-        top_right_corner = (position[0] + Units.DEFENSE_MECHANISM_WIDTH, position[1] + 0.25)
+        next_available_child_position = (self.grid_position[0] + 2*Node.Padding.X + Defense.width, self.grid_position[1])
+        top_right_corner = self.get_top_right_corner()
         for child in self.children_attack_events:
             # stack the children
-            linked_setup_class_gui = model.create_linked_setup_class_gui(child.setup_class_gui, setup_view, position=start_position)
+            linked_setup_class_gui = model.create_linked_setup_class_gui(child.setup_class_gui, setup_view, position=next_available_child_position)
             set_default_attribute_values(child.data[String.TYPE], linked_setup_class_gui)
-            child_top_left_corner = (start_position[0] - 1, start_position[1] + 0.25)
+            child_top_left_corner = Node.get_top_left_corner(next_available_child_position)
             setup_view.create_connection_with_blocks(start_coordinate=top_right_corner, end_coordinate=child_top_left_corner)
-            start_position = (start_position[0], start_position[1] + Units.SIMPLE_VERTICAL_PADDING + Units.ATTACK_EVENT_HEIGHT)
+            next_available_child_position = (next_available_child_position[0], next_available_child_position[1] + Node.Padding.X + AttackEvent.height)
+
+    def get_top_left_corner(self):
+        """Get the top left corner of the node in order to draw a connection"""
+        return (self.grid_position[0] - Node.Offset.X, self.grid_position[1] + Node.Offset.Y)
+    
+    def get_top_right_corner(self):
+        """Get the top right corner of the node in order to draw a connection"""
+        return (self.grid_position[0] + Defense.width, self.grid_position[1] + Node.Offset.Y)
+    
+    def get_top_middle(self):
+        """Get the top middle of the node in order to draw a connection"""
+        return (self.grid_position[0] + Node.width/2, self.grid_position[1] + Node.Offset.Y)
+    
+    def get_bottom_middle(self):
+        """Get the bottom middle of the node in order to draw a connection"""
+        return (self.grid_position[0] + Node.width/2, self.grid_position[1] + Node.height + Node.Offset.Y)
+
+
+class Actor(Node):
+    height = 3
+
+    def __init__(self, data):
+        super().__init__(data)
+        self.loss_events : list[LossEvent] = []
+    
+    def compute_risk_tree_grid_coordinates(self, position=None):
+        """
+        Place every node in a grid. Every level is left-justified. The root is on top.
+        Depth-first 'in-order' algorithm
+        INPUT: position assigned to the current Node
+        OUTPUT: next available position for the sub-tree on the same level
+        """
+        self.grid_position = (0,0) if not position else position
+        next_available_child_position = (self.grid_position[0], self.grid_position[1] + Actor.height + Node.Padding.Y)
+        for child_node in self.loss_events:
+            next_available_child_position = child_node.compute_risk_tree_grid_coordinates(next_available_child_position)
+        next_spot_on_same_row = (next_available_child_position[0] + Node.Padding.X, self.grid_position[1])
+        return next_spot_on_same_row
+
+    def create_setup_class(self, setup_view : SetupView, configuration_classes_gui : list[GUIConfigurationClass]):
+        """In the context of a risk tree, create the setup representation for the node and add connections to its children"""
+        # Create a block
+        type = self.data[String.TYPE]
+        
+        self.setup_class_gui : GUISetupClass
+        self.setup_class_gui = setup_view.create_setup_class_gui(configuration_class_gui=configuration_classes_gui[Configuration_classes_gui.ACTOR], position=self.grid_position)
+
+        self.setup_class_gui.set_name(self.data[String.NAME])
+        self.setup_class_gui.update_text()
+        set_default_attribute_values(type, self.setup_class_gui)
+
+        # Link all related Loss events (abuse cases and attackers follow recursively) in a tree structure
+        for loss_event in self.loss_events:
+            loss_event.create_setup_class(setup_view, configuration_classes_gui)
+            setup_view.create_connection_with_blocks(start_coordinate=loss_event.get_top_right_corner(), end_coordinate=self.get_top_left_corner())
+    
+    def get_top_left_corner(self):
+        """Get the top left corner of the node in order to draw a connection"""
+        return (self.grid_position[0] - Node.Offset.X, self.grid_position[1] + Node.Offset.Y)
+    
+    def get_top_right_corner(self):
+        """Get the top right corner of the node in order to draw a connection"""
+        return (self.grid_position[0] + Actor.width, self.grid_position[1] + Node.Offset.Y)
+    
+    def get_top_middle(self):
+        """Get the top middle of the node in order to draw a connection"""
+        return (self.grid_position[0] + Node.width/2, self.grid_position[1] + Node.Offset.Y)
+    
+    def get_bottom_middle(self):
+        """Get the bottom middle of the node in order to draw a connection"""
+        return (self.grid_position[0] + Node.width/2, self.grid_position[1] + Node.height + Node.Offset.Y)
+
+
+class LossEvent(Node):
+    height = 5
+
+    def __init__(self, data):
+        super().__init__(data)
+        self.attack_events : list[AttackEvent] = []
+        self.abuse_cases : list[AbuseCase] = []
+        self.actor : Actor
+        
+    def compute_risk_tree_grid_coordinates(self, position):
+        """
+        Place every node in a grid. Every level is left-justified. The root is on top.
+        Depth-first 'in-order' algorithm
+        INPUT: position assigned to the current Node
+        OUTPUT: next available position for the sub-tree on the same level
+        """
+        self.grid_position = position
+        next_available_child_position = (self.grid_position[0], self.grid_position[1] + LossEvent.height + Node.Padding.Y)
+        for child_node in self.abuse_cases:
+            next_available_child_position = child_node.compute_risk_tree_grid_coordinates(next_available_child_position)
+        next_spot_on_same_row = (next_available_child_position[0] + Node.Padding.X, self.grid_position[1])
+        return next_spot_on_same_row
+    
+    def create_setup_class(self, setup_view : SetupView, configuration_classes_gui : list[GUIConfigurationClass]):
+        """In the contest of a risk tree, create the setup representation for the node and add connections to its children"""
+        # Create a block
+        self.setup_class_gui : GUISetupClass
+        self.setup_class_gui = setup_view.create_setup_class_gui(configuration_class_gui=configuration_classes_gui[Configuration_classes_gui.LOSS_EVENT], position=self.grid_position)
+        
+        self.setup_class_gui.set_name(self.data[String.NAME])
+        self.setup_class_gui.update_text()
+        set_default_attribute_values(type, self.setup_class_gui)
+
+        # Link all related Abuse cases (attackers follow recursively) in a tree structure
+        for abuse_case in self.abuse_cases:
+            abuse_case.create_setup_class(setup_view, configuration_classes_gui)
+            setup_view.create_connection_with_blocks(start_coordinate=abuse_case.get_top_right_corner(), end_coordinate=self.get_top_left_corner())
+
+    def get_top_left_corner(self):
+        """Get the top left corner of the node in order to draw a connection"""
+        return (self.grid_position[0] - Node.Offset.X, self.grid_position[1] + Node.Offset.Y)
+    
+    def get_top_right_corner(self):
+        """Get the top right corner of the node in order to draw a connection"""
+        return (self.grid_position[0] + LossEvent.width, self.grid_position[1] + Node.Offset.Y)
+    
+    def get_top_middle(self):
+        """Get the top middle of the node in order to draw a connection"""
+        return (self.grid_position[0] + Node.width/2, self.grid_position[1] + Node.Offset.Y)
+    
+    def get_bottom_middle(self):
+        """Get the bottom middle of the node in order to draw a connection"""
+        return (self.grid_position[0] + Node.width/2, self.grid_position[1] + Node.height + Node.Offset.Y)
 
 
 class AbuseCase(Node):
+    height = 11
+
     def __init__(self, data):
         super().__init__(data)
         self.attacker : Attacker
         self.attack_events : list[AttackEvent] = [] # filled by YacrafModel.build()
         self.loss_events : list[LossEvent] = [] # filled by YacrafModel.build()
 
+    def compute_risk_tree_grid_coordinates(self, position):
+        """
+        Place every node in a grid. Every level is left-justified. The root is on top.
+        Depth-first 'in-order' algorithm
+        INPUT: position assigned to the current Node
+        OUTPUT: next available position for the sub-tree on the same level
+        """
+        self.grid_position = position
+        attacker_position = (self.grid_position[0], self.grid_position[1] + AbuseCase.height + Node.Padding.Y)
+        self.attacker.compute_risk_tree_grid_coordinates(attacker_position)
+        next_spot_on_same_row = (self.grid_position[0] + AbuseCase.width + Node.Padding.X, self.grid_position[1])
+        return next_spot_on_same_row
+
     def create_setup_class(self, setup_view : SetupView, configuration_classes_gui : list[GUIConfigurationClass], position = None, model=None):
-        """create the setup representation for the node and add connections to its children"""
+        """In the context of a risk tree, create the setup representation for the node and add connections to its children"""
         # Create a block
         position = self.grid_position if not position else position # use different position for plotting linked classes in another system_view
         
@@ -289,70 +487,46 @@ class AbuseCase(Node):
         self.setup_class_gui.update_text()
         set_default_attribute_values(type, self.setup_class_gui)
 
-        # Create eventual children blocks and connections
-        top_right_corner = (self.grid_position[0] + Units.ABUSE_CASE_WIDTH, self.grid_position[1] + 0.25)
-        root = self.attack_events[0]
-        root_top_left_corner = (root.grid_position[0] - 1, root.grid_position[1] + 0.25)
-        # connect to the root
-        setup_view.create_connection_with_blocks(start_coordinate=top_right_corner, end_coordinate=root_top_left_corner)
+        # Link Attacker in a tree structure
+        self.attacker.create_setup_class(setup_view, configuration_classes_gui)
+        setup_view.create_connection_with_blocks(start_coordinate=self.attacker.get_top_right_corner(), end_coordinate=self.get_top_left_corner())
+
+    def get_top_left_corner(self):
+        """Get the top left corner of the node in order to draw a connection"""
+        return (self.grid_position[0] - Node.Offset.X, self.grid_position[1] + Node.Offset.Y)
+    
+    def get_top_right_corner(self):
+        """Get the top right corner of the node in order to draw a connection"""
+        return (self.grid_position[0] + AbuseCase.width, self.grid_position[1] + Node.Offset.Y)
+    
+    def get_top_middle(self):
+        """Get the top middle of the node in order to draw a connection"""
+        return (self.grid_position[0] + Node.width/2, self.grid_position[1] + Node.Offset.Y)
+    
+    def get_bottom_middle(self):
+        """Get the bottom middle of the node in order to draw a connection"""
+        return (self.grid_position[0] + Node.width/2, self.grid_position[1] + Node.height + Node.Offset.Y)
 
 
-class LossEvent(Node):
+class Attacker(Node):
+    height = 7
+
     def __init__(self, data):
         super().__init__(data)
-        self.attack_events : list[AttackEvent] = []
         self.abuse_cases : list[AbuseCase] = []
-        self.actor : Actor
 
-    def create_setup_class(self, setup_view : SetupView, configuration_classes_gui : list[GUIConfigurationClass], position = None, model=None):
-        """create the setup representation for the node and add connections to its children"""
-        # Create a block
-        position = self.grid_position if not position else position # use different position for plotting linked classes in another system_view
-        
-        self.setup_class_gui : GUISetupClass
-        self.setup_class_gui = setup_view.create_setup_class_gui(configuration_class_gui=configuration_classes_gui[Configuration_classes_gui.LOSS_EVENT], position=position)
-        
-        self.setup_class_gui.set_name(self.data[String.NAME])
-        self.setup_class_gui.update_text()
-        set_default_attribute_values(type, self.setup_class_gui)
-
-        # connect to the root
-        root = self.attack_events[0]
-        top_left_corner = (self.grid_position[0] - 1, self.grid_position[1] + 0.25)
-        root_top_right_corner = (root.grid_position[0] + Units.ATTACK_EVENT_WIDTH, root.grid_position[1] + 0.25)
-        
-        setup_view.create_connection_with_blocks(start_coordinate=root_top_right_corner, end_coordinate=top_left_corner)
-        
-
-class Actor(Node):  
-    def __init__(self, data):
-        super().__init__(data)
-        self.loss_events : list[LossEvent] = []
+    def compute_risk_tree_grid_coordinates(self, position):
+        """
+        Place every node in a grid. Every level is left-justified. The root is on top.
+        Depth-first 'in-order' algorithm
+        INPUT: position assigned to the current Node
+        OUTPUT: None
+        """
+        self.grid_position = position
     
     def create_setup_class(self, setup_view : SetupView, configuration_classes_gui : list[GUIConfigurationClass], position = None, model=None):
-        """create the setup representation for the node and add connections to its children"""
+        """In the context of a risk tree, create the setup representation for the node and add connections to its children"""
         # Create a block
-        type = self.data[String.TYPE]
-        position = self.grid_position if not position else position # use different position for plotting linked classes in another system_view
-        
-        self.setup_class_gui : GUISetupClass
-        self.setup_class_gui = setup_view.create_setup_class_gui(configuration_class_gui=configuration_classes_gui[Configuration_classes_gui.ACTOR], position=position)
-
-        self.setup_class_gui.set_name(self.data[String.NAME])
-        self.setup_class_gui.update_text()
-        set_default_attribute_values(type, self.setup_class_gui)
-
-        # Loss events connect to actors upon creation of setup class
-
-class Attacker(Node):  
-    def __init__(self, data):
-        super().__init__(data)
-        self.abuse_cases : list[AbuseCase] = []
-
-    def create_setup_class(self, setup_view : SetupView, configuration_classes_gui : list[GUIConfigurationClass], position = None, model=None):
-        """create the setup representation for the node and add connections to its children"""
-        # Create a block
-        type = self.data[String.TYPE]
         position = self.grid_position if not position else position # use different position for plotting linked classes in another system_view
         
         self.setup_class_gui : GUISetupClass
@@ -360,10 +534,24 @@ class Attacker(Node):
 
         self.setup_class_gui.set_name(self.data[String.NAME])
         self.setup_class_gui.update_text()
-        set_default_attribute_values(type, self.setup_class_gui)
+        #set_default_attribute_values(self.setup_class_gui)
 
-        # Create eventual children blocks and connections
-        # TODO
+    def get_top_left_corner(self):
+        """Get the top left corner of the node in order to draw a connection"""
+        return (self.grid_position[0] - Node.Offset.X, self.grid_position[1] + Node.Offset.Y)
+    
+    def get_top_right_corner(self):
+        """Get the top right corner of the node in order to draw a connection"""
+        return (self.grid_position[0] + Attacker.width, self.grid_position[1] + Node.Offset.Y)
+    
+    def get_top_middle(self):
+        """Get the top middle of the node in order to draw a connection"""
+        return (self.grid_position[0] + Node.width/2, self.grid_position[1] + Node.Offset.Y)
+    
+    def get_bottom_middle(self):
+        """Get the bottom middle of the node in order to draw a connection"""
+        return (self.grid_position[0] + Node.width/2, self.grid_position[1] + Node.height + Node.Offset.Y)
+
 
 class YacrafModelBuildError(Exception):
     """Raised when the defenses are added after the tree is built"""

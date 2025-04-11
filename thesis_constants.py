@@ -60,20 +60,26 @@ class String(str, Enum):
     EXTERNAL = "external"
     INTERNAL = "internal"
 
+"""
 class Units(int, Enum):
-    """Numerical constants used for plotting in the YACRAF calculator"""
+    Numerical constants used for plotting in the YACRAF calculator
     # TODO change to universal block width?
     ATTACK_EVENT_WIDTH = 11
     ATTACK_EVENT_HEIGHT = 5
     DEFENSE_MECHANISM_WIDTH = 11
     DEFENSE_MECHANISM_HEIGHT = 3
-    LOSS_EVENT_HEIGHT = 3
+    LOSS_EVENT_HEIGHT = 5
     LOSS_EVENT_WIDTH = 11
-    ABUSE_CASE_HEIGHT = 8
+    ABUSE_CASE_HEIGHT = 11
     ABUSE_CASE_WIDTH = 11
     SIMPLE_VERTICAL_PADDING = 2
     VERTICAL_PADDING = 4
     HORIZONTAL_PADDING = 2
+    ACTOR_WIDTH = 11
+    ACTOR_HEIGHT = 3
+    ATTACKER_WIDTH = 11
+    ATTACKER_HEIGHT = 7
+"""
 
 class Attack_event_setup_attribute(int, Enum):
     """Indices of setup attributes in an attack event"""
