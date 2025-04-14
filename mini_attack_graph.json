@@ -23,6 +23,30 @@
             "is_viable": "True",
             "is_necessary": "False"
         },
+        "Application 1:defensedefense": {
+            "id": 11,
+            "type": "defense",
+            "lang_graph_attack_step": "Application:notOnline",
+            "name": "notOnline",
+            "ttc": {
+                "type": "function",
+                "name": "Disabled",
+                "arguments": []
+            },
+            "children": {
+                "2": "Application 1:successfulUseVulnerability",
+                "3": "Application 1:useVulnerability",
+                "4": "Application 1:attemptReverseReach",
+                "7": "Application 1:localConnect",
+                "9": "Application 1:networkConnectInspected"
+            },
+            "parents": {},
+            "compromised_by": [],
+            "asset": "Application 1",
+            "defense_status": "0.0",
+            "is_viable": "True",
+            "is_necessary": "False"
+        },
         "Application 1:notPresent": {
             "id": 0,
             "type": "or",
@@ -253,6 +277,45 @@
             "loss_events": {
                 "0": "Videos unavailable"
             }
+        },
+        "Music is bad": {
+            "name": "Music is bad",
+            "id": 1,
+            "window_of_opportunity": 0,
+            "ability_to_repudiate": 0,
+            "perceived_deterrence": 10,
+            "perceived_ease_of_attack": 0,
+            "perceived_benefit_of_success": 5,
+            "attacker": {
+                "1": "Jean-Pierre"
+            },
+            "attack_steps": {
+                "0": "Application 1:notPresent"
+            },
+            "loss_events": {
+                "0": "Videos unavailable",
+                "1": "Music unavailable",
+                "2": "Lorem ipsum"
+            }
+        },
+        "Lorem ipsum kiki": {
+            "name": "Lorem ipsum kiki",
+            "id": 2,
+            "window_of_opportunity": 0,
+            "ability_to_repudiate": 0,
+            "perceived_deterrence": 10,
+            "perceived_ease_of_attack": 0,
+            "perceived_benefit_of_success": 5,
+            "attacker": {
+                "0": "Hacktivist"
+            },
+            "attack_steps": {
+                "0": "Application 1:notPresent"
+            },
+            "loss_events": {
+                "0": "Videos unavailable",
+                "2": "Lorem ipsum"
+            }
         }
     },
     "loss_events": {
@@ -265,10 +328,45 @@
                 "0":"Application 1:notPresent"
             },
             "actor": {
+                "1": "Pascal"
+            },
+            "abuse_cases": {
+                "0": "Block video streaming",
+                "1": "Music is bad",
+                "2": "Lorem ipsum kiki"
+            }
+        },
+        "Music unavailable": {
+            "name": "Music unavailable",
+            "id": 1,
+            "type": ["productivity", "financial"],
+            "magnitude": [0.2, 1, 1.4],
+            "attack_steps": {
+                "0":"Application 1:notPresent"
+            },
+            "actor": {
                 "0": "User"
             },
             "abuse_cases": {
-                "0": "Block video streaming"
+                "0": "Block video streaming",
+                "1": "Music is bad"
+            }
+        },
+        "Lorem ipsum": {
+            "name": "Lorem ipsum",
+            "id": 2,
+            "type": ["productivity", "financial"],
+            "magnitude": [0.2, 1, 1.4],
+            "attack_steps": {
+                "0":"Application 1:notPresent"
+            },
+            "actor": {
+                "0": "User"
+            },
+            "abuse_cases": {
+                "0": "Block video streaming",
+                "1": "Music is bad",
+                "2": "Lorem ipsum kiki"
             }
         }
     },
@@ -278,7 +376,17 @@
             "id": 0,
             "type": "external",
             "loss_events": {
-                "0": "Videos unavailable"
+                "0": "Videos unavailable",
+                "2": "Lorem ipsum"
+            }
+        },
+        "Pascal": {
+            "name": "Pascal",
+            "id": 1,
+            "type": "external",
+            "loss_events": {
+                "0": "Videos unavailable",
+                "1": "Music unavailable"
             }
         }
     }

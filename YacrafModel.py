@@ -10,6 +10,7 @@ import copy
 from model import Model
  
 def set_default_attribute_values(type, setup_class_gui):
+    # TODO refactor into different classes
     attributes = setup_class_gui.get_setup_attributes_gui()
     match type:
         case String.AND | String.OR:
@@ -22,32 +23,37 @@ def set_default_attribute_values(type, setup_class_gui):
 class YacrafModel:
     def __init__(self, defenses, abuse_cases, loss_events, attackers, actors):
         """Initialize the tree by positioning it on the screen and adding abuse cases and loss events"""
-        self.__root: AttackEvent = None
-        self.position = None
+        self.attack_trees: list[AttackEvent] = []
         self.defenses = [Defense(defense) for defense in defenses]
         self.abuse_cases = [AbuseCase(abuse_case) for abuse_case in abuse_cases]
         self.loss_events = [LossEvent(loss_event) for loss_event in loss_events]
         self.attackers = [Attacker(attacker) for attacker in attackers]
         self.actors = [Actor(actor) for actor in actors]
 
-    def build(self, root_data, attack_events):
+    def build(self, attack_tree_roots, attack_events):
         """Build the YACRAF model by connecting all its components"""
-        # Recursively build the attack graph, linking attack events and defense mechanisms
-        self.__root = AttackEvent(root_data, attack_events=attack_events, defenses=self.defenses)
+        
+        for root in attack_tree_roots:
+            # Recursively build the attack tree, linking attack events and defense mechanisms
+            self.attack_trees.append(AttackEvent(root, attack_events=attack_events, defenses=self.defenses))
         
         for abuse_case in self.abuse_cases:
-            # link the root and abuse case
-            abuse_case.attack_events.append(self.__root)
+            # link the abuse case to attack trees
+            for attack_tree_root in self.attack_trees:
+                if str(attack_tree_root.data[String.ID]) in abuse_case.data[String.ATTACK_STEPS]:
+                    abuse_case.attack_events.append(attack_tree_root)
             # link attacker and abuse case
-            id = next(iter(abuse_case.data[String.ATTACKER]))
+            id = next(iter(abuse_case.data[String.ATTACKER])) # one attacker per abuse case, json dict format
             for attacker in self.attackers:
                 if str(attacker.data[String.ID]) == id:
                     abuse_case.attacker = attacker
                     attacker.abuse_cases.append(abuse_case)
 
         for loss_event in self.loss_events:
-            # link the root and the loss events
-            loss_event.attack_events.append(self.__root)
+            # link the loss events to attack trees
+            for attack_tree_root in self.attack_trees:
+                if str(attack_tree_root.data[String.ID]) in loss_event.data[String.ATTACK_STEPS]:
+                    loss_event.attack_events.append(attack_tree_root)
             # link the loss event and abuse cases
             for id, name in loss_event.data[String.ABUSE_CASES].items():
                 for abuse_case in self.abuse_cases:
@@ -61,13 +67,14 @@ class YacrafModel:
                     if str(actor.data[String.ID]) == id:
                         loss_event.actor = actor
                         actor.loss_events.append(loss_event)
-                        # We do not want to break. Check for validity of the model later instead.
+                        break # only one actor per loss event
 
-    def compute_grid_coordinates(self, position):
-        """Compute the grid coordinates for the tree elements"""
-        self.position = position
-        # Recursively compute grid positions for the attack tree
-        self.__root.compute_attack_tree_grid_coordinates(self.position)
+    def compute_grid_coordinates(self):
+        """Compute the grid coordinates for the model's nodes"""
+        # Recursively compute grid positions for the attack trees
+        for attack_tree in self.attack_trees:
+            start_position = (0, 0)
+            attack_tree.compute_attack_tree_grid_coordinates(start_position)
 
         # Recursively compute grid positions for the risk tree
         for actor in self.actors:
@@ -78,18 +85,29 @@ class YacrafModel:
             defense.grid_position = (i*(Defense.width + AttackEvent.width + 2*Node.Padding.X), 0)
 
     def plot(self, model: Model):
-        setup_view_attack_tree : SetupView = model.create_view(False, f"Attack Tree: {self.__root.data[String.NAME]}")
+        # configuration classes defined in the yagraf model
+        configuration_view : ConfigurationView = model.get_configuration_views()[Metamodel.YACRAF_1]
+        configuration_classes_gui : list[GUIConfigurationClass]= configuration_view.get_configuration_classes_gui()
+        
+        setup_views_attack_tree : list[SetupView] = []
+        for attack_tree in self.attack_trees:
+            setup_view_attack_tree : SetupView = model.create_view(False, f"Attack Tree: {attack_tree.data[String.NAME]}")
+            setup_views_attack_tree.append(setup_view_attack_tree)
+            attack_tree.create_setup_class(setup_view_attack_tree, configuration_classes_gui)
+        
+        setup_views_defenses : list[SetupView] = []
+        for defense in self.defenses:
+            setup_view_defense : SetupView = model.create_view(False, f"Defense Mechanisms: {defense.data[String.NAME]}")
+            setup_views_defenses.append(setup_view_defense)
+            defense.create_setup_class(setup_view_defense, configuration_classes_gui, model=model)
         setup_view_defenses : SetupView = model.create_view(False, f"Defense Mechanisms: {self.__root.data[String.NAME]}")
 
-        configuration_view_main : ConfigurationView = model.get_configuration_views()[Metamodel.YACRAF_1]
-        configuration_classes_gui_main : list[GUIConfigurationClass]= configuration_view_main.get_configuration_classes_gui()
         
         ## create the attack tree
         self.__root.create_setup_class(setup_view_attack_tree, configuration_classes_gui_main)
 
         ## plot the risk tree
         # one setup view per actor
-        start_position = (0, 0)
         for actor in self.actors:
             setup_view_risk = model.create_view(False, f"Risk for {actor.data[String.NAME]}")
             actor.create_setup_class(setup_view_risk, configuration_classes_gui_main)
@@ -350,14 +368,14 @@ class Actor(Node):
         super().__init__(data)
         self.loss_events : list[LossEvent] = []
     
-    def compute_risk_tree_grid_coordinates(self, position=None):
+    def compute_risk_tree_grid_coordinates(self):
         """
         Place every node in a grid. Every level is left-justified. The root is on top.
         Depth-first 'in-order' algorithm
         INPUT: position assigned to the current Node
         OUTPUT: next available position for the sub-tree on the same level
         """
-        self.grid_position = (0,0) if not position else position
+        self.grid_position = (0,0)
         next_available_child_position = (self.grid_position[0], self.grid_position[1] + Actor.height + Node.Padding.Y)
         for child_node in self.loss_events:
             next_available_child_position = child_node.compute_risk_tree_grid_coordinates(next_available_child_position)
