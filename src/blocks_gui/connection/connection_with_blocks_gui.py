@@ -16,8 +16,8 @@ class GUIConnectionWithBlocks(GUIConnection):
         
         start_block = GUIConnectionTriangle(model, view, "RIGHT", False) # Points out from class
         end_block = GUIConnectionTriangle(model, view, "RIGHT", True) # Points into class
-        
         super().__init__(model, view, start_block, "RIGHT", end_block=end_block, end_direction="LEFT")
+        self.__is_deleted = False
         
         # Move start block to specified coordinate
         if start_coordinate != None:
@@ -37,8 +37,7 @@ class GUIConnectionWithBlocks(GUIConnection):
         if self.__input_scalars_indicator != None and input_scalars_indicator_coordinate != None:
             self.__input_scalars_indicator.move_block(input_scalars_indicator_coordinate[0] - self.__input_scalars_indicator.get_x(), \
                                                       input_scalars_indicator_coordinate[1] - self.__input_scalars_indicator.get_y())
-            
-        self.__is_deleted = False
+
         
     def scale(self, new_length_unit, last_length_unit):
         super().scale(new_length_unit, last_length_unit)
@@ -239,6 +238,7 @@ class GUIConnectionWithBlocks(GUIConnection):
     def delete(self):
         if not self.__is_deleted:
             self.__is_deleted = True
+            import pdb; pdb.set_trace()
             
             if self.__input_scalars_indicator != None:
                 self.__input_scalars_indicator.delete()

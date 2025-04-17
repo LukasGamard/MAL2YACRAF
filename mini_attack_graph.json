@@ -255,7 +255,34 @@
             "resources": 5,
             "sponsorship": 0,
             "abuse_cases": {
-                "0": "Block video streaming"
+                "0": "Block video streaming",
+                "2": "Lorem ipsum kiki"
+            }
+        },
+        "Jean-Pierre": {
+            "name": "Attacker:Jean-Pierre",
+            "entry_points": {
+                "Hardware:1": {
+                    "asset_id": 1,
+                    "attack_steps": [
+                        "attemptSupplyChainAttack"
+                    ]
+                },
+                "SoftwareProduct:2": {
+                    "asset_id": 2,
+                    "attack_steps": [
+                        "compromiseApplications"
+                    ]
+                }
+            },
+            "id": 1,
+            "personal_risk_tolerance": 5,
+            "concern_for_collateral_damage": 5,
+            "skill": 5,
+            "resources": 5,
+            "sponsorship": 0,
+            "abuse_cases": {
+                "1": "Music is bad"
             }
         }
     },
@@ -272,7 +299,7 @@
                 "0": "Hacktivist"
             },
             "attack_steps": {
-                "0": "Application 1:notPresent"
+                "1": "Application 1:notPresent"
             },
             "loss_events": {
                 "0": "Videos unavailable"
