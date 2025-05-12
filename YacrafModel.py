@@ -54,7 +54,7 @@ class YacrafModel:
         # create setup_classes for Defenses, linked_setup_classes for AttackEvents
         setup_view_defense : SetupView = model.create_view(False, f"Defense Mechanisms")
         for i, defense in enumerate(self.defenses):
-            defense_position = (i*(Defense.width + AttackEvent.width + 2*Node.Padding.X), 0)
+            defense_position = (i*(Defense.width + AttackEvent.width + 4*Node.Padding.X), 0)
             defense.create_setup_class(setup_view_defense, configuration_classes_gui, defense_position, model)
 
         ## Plot the risk trees
@@ -66,24 +66,25 @@ class YacrafModel:
         
         ## Plot the abuse cases and loss events linked to the top of an attack tree
         for attack_tree in self.attack_trees:
-            setup_view_attack_tree_top_level : SetupView = model.create_view(False, f"Abuse Cases/Loss Events for {attack_tree.data[String.NAME]}")
-            start_position = (0, 0)
-            # link the root of the attack tree
-            linked_root : GUISetupClass = model.create_linked_setup_class_gui(attack_tree.setup_class_gui, setup_view_attack_tree_top_level, position=start_position)
-            root_top_left_corner = Node.get_top_left_corner(start_position)
-            root_top_right_corner = Node.get_top_right_corner(start_position)
-
             for risk_tree in self.risk_trees:
+                setup_view_attack_tree_top_level : SetupView = model.create_view(False, f"Abuse Cases/Loss Events for actor {risk_tree.data[String.NAME]}")
+                start_position = (0, 0)
+
+                # link the root of the attack tree
+                linked_root : GUISetupClass = model.create_linked_setup_class_gui(attack_tree.setup_class_gui, setup_view_attack_tree_top_level, position=start_position)
+                root_top_left_corner = Node.get_top_left_corner(start_position)
+                root_top_right_corner = Node.get_top_right_corner(start_position)
+
                 # Plot abuse cases
                 for i, abuse_case in enumerate(Actor.AbuseCaseIterable(risk_tree)):
-                    abuse_case_position = (start_position[0] - AbuseCase.width - 2*Node.Padding.X, start_position[1] - (i+1)*(AbuseCase.height + Node.Padding.Y))
+                    abuse_case_position = (start_position[0] - AbuseCase.width - 2*Node.Padding.X, start_position[1] + i*(AbuseCase.height + Node.Padding.Y))
                     linked_abuse_case : GUISetupClass = model.create_linked_setup_class_gui(abuse_case.setup_class_gui, setup_view_attack_tree_top_level, position=abuse_case_position)
                     abuse_case_top_right_corner = Node.get_top_right_corner(abuse_case_position)
                     setup_view_attack_tree_top_level.create_connection_with_blocks(start_coordinate=abuse_case_top_right_corner, end_coordinate=root_top_left_corner)
                 
                 # Plot the loss events
                 for i, loss_event in enumerate(Actor.LossEventIterable(risk_tree)):
-                    loss_event_position = (start_position[0] + AttackEvent.width + 2*Node.Padding.X, start_position[1] - (i+1)*(LossEvent.height + Node.Padding.Y))
+                    loss_event_position = (start_position[0] + AttackEvent.width + 2*Node.Padding.X, start_position[1] + i*(LossEvent.height + Node.Padding.Y))
                     linked_loss_event : GUISetupClass = model.create_linked_setup_class_gui(loss_event.setup_class_gui, setup_view_attack_tree_top_level, position=loss_event_position)
                     loss_event_top_left_corner = Node.get_top_left_corner(loss_event_position)
                     setup_view_attack_tree_top_level.create_connection_with_blocks(start_coordinate=root_top_right_corner, end_coordinate=loss_event_top_left_corner)
@@ -269,7 +270,7 @@ class AttackEvent(Node):
         self.setup_class_gui.update_text()
 
         if full_attack_tree:
-            next_spot_on_same_row = (next_available_child_position[0] + Node.Padding.X, position[1])
+            next_spot_on_same_row = (next_available_child_position[0] + 2*Node.Padding.X, position[1])
         else:
             next_spot_on_same_row = (position[0] + Node.Padding.X, position[1])
         return next_spot_on_same_row
@@ -419,7 +420,7 @@ class Actor(Node):
         self.setup_class_gui.set_name(self.data[String.NAME])
         self.setup_class_gui.update_text()
 
-        next_spot_on_same_row = (next_available_child_position[0] + Node.Padding.X, position[1])
+        next_spot_on_same_row = (next_available_child_position[0] + 2*Node.Padding.X, position[1])
         return next_spot_on_same_row
 
     def get_top_left_corner(self):
@@ -463,7 +464,7 @@ class LossEvent(Node):
         self.setup_class_gui.update_text()
         #set_default_attribute_values(type, self.setup_class_gui)
 
-        next_spot_on_same_row = (next_available_child_position[0] + Node.Padding.X, position[1])
+        next_spot_on_same_row = (next_available_child_position[0] + 2*Node.Padding.X, position[1])
         return next_spot_on_same_row
     
     def get_top_left_corner(self):
@@ -516,7 +517,7 @@ class AbuseCase(Node):
         attacker_position = (self.grid_position[0], self.grid_position[1] + AbuseCase.height + Node.Padding.Y)
         self.child.create_setup_class(setup_view, configuration_classes_gui, attacker_position)
         setup_view.create_connection_with_blocks(start_coordinate=self.child.get_top_right_corner(), end_coordinate=self.get_top_left_corner())
-        next_spot_on_same_row = (self.grid_position[0] + AbuseCase.width + Node.Padding.X, self.grid_position[1])
+        next_spot_on_same_row = (self.grid_position[0] + AbuseCase.width + 2*Node.Padding.X, self.grid_position[1])
         return next_spot_on_same_row
 
     def get_top_left_corner(self):

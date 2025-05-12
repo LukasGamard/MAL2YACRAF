@@ -238,7 +238,6 @@ class GUIConnectionWithBlocks(GUIConnection):
     def delete(self):
         if not self.__is_deleted:
             self.__is_deleted = True
-            import pdb; pdb.set_trace()
             
             if self.__input_scalars_indicator != None:
                 self.__input_scalars_indicator.delete()
