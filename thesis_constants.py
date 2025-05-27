@@ -37,6 +37,7 @@ class String(str, Enum):
     OR = "or"
     DEFENSE= "defense"
     CHILDREN = "children"
+    LOCAL_DIFFICULTY = "local_difficulty"
 
     # attacker's attributes
     PERSONAL_RISK_TOLERANCE = "personal_risk_tolerance"
@@ -46,11 +47,18 @@ class String(str, Enum):
     SPONSORSHIP = "sponsorship"
 
     # abuse case's attributes
+    ACCESSIBILITY_TO_ATTACK_SURFACE = "accessibility_to_attack_surface"
     WINDOW_OF_OPPORTUNITY = "window_of_opportunity"
-    ABILITY_TO_REPUDOATE = "ability_to_repudiate"
+    ABILITY_TO_REPUDIATE = "ability_to_repudiate"
     PERCEIVED_DETERRENCE = "perceived_deterrence"
     PERCEIVED_BENEFIT_OF_SUCCESS = "perceived_benefit_of_success"
+    PERCEIVED_EASE_OF_ATTACK = "perceived_ease_of_attack"
+    EFFORT_SPENT = "effort_spent"
     ATTACKER = "attacker"
+
+    # defense mechanism's attributes
+    COST = "cost"
+    IMPACT = "impact"
 
     # loss event's attributes
     MAGNITUDE = "magnitude"
@@ -92,3 +100,30 @@ class Defense_setup_attribute(int, Enum):
     """Indices of etup attributes in a defense mechanism"""
     COST = 0
     IMPACT = 1
+
+class Loss_event_setup_attribute(int, Enum):
+    """Indices of setup attributes in a loss event"""
+    TYPE = 0
+    MAGNITUDE = 1
+
+class Actor_setup_attribute(int, Enum):
+    """Indices of setup attributes in an actor"""
+    TYPE = 0
+
+class Attacker_setup_attribute(int, Enum):
+    """Indices of setup attributes in an attacker"""
+    PERSONAL_RISK_TOLERANCE = 0
+    CONCERN_FOR_COLLATERAL_DAMAGE = 1
+    SKILL = 2
+    RESOURCES = 3
+    SPONSORSHIP = 4
+
+class Abuse_case_setup_attribute(int, Enum):
+    """Indices of setup attributes in an abuse case"""
+    ACCESSIBILITY_TO_ATTACK_SURFACE = 0
+    WINDOW_OF_OPPORTUNITY = 1
+    ABILITY_TO_REPUDIATE = 2
+    PERCEIVED_DETERRENCE = 3
+    PERCEIVED_EASE_OF_ATTACK = 4
+    PERCEIVED_BENEFIT_OF_SUCCESS = 5
+    EFFORT_SPENT = 8 # see YACRAF metamodel

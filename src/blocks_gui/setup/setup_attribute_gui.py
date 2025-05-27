@@ -209,4 +209,6 @@ class GUISetupAttribute(GUIModelingBlock):
 
     # Additions by Lukas Gamard 25/04/03
     def set_entry_value(self, value):
+        if not self.__entry_value:
+            self.__entry_value = PressableEntry(self.get_model(), self.get_view(), self.get_x()+ATTRIBUTE_WIDTH, self.get_y(), SETUP_WIDTH_ADDITION, self.get_height(), lambda: self.update_linked_entry_text())
         self.__entry_value.set_entry_text(value)

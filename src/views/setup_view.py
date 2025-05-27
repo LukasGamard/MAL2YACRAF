@@ -7,6 +7,7 @@ from connection_gui import GUIConnection
 from connection_with_blocks_gui import GUIConnectionWithBlocks
 from helper_functions_general import delete_all
 from config import *
+import logging
 
 class SetupView(View):
     """
@@ -90,6 +91,8 @@ class SetupView(View):
         """
         Creates a GUI setup class that is drawn on the canvas in the view
         """
+        logger = logging.getLogger(__name__)
+        logger.debug(f"Creating setup class GUI {setup_class_gui_to_copy}")
         if not((configuration_class_gui == None and setup_class_gui_to_copy != None) or \
                (configuration_class_gui != None and setup_class_gui_to_copy == None)):
             print("Error: Exactly one of configuration_class_gui and setup_class_gui_to_copy need to be specified")

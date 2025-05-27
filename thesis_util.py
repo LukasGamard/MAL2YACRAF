@@ -2,16 +2,9 @@
 from __future__ import annotations
 
 import json
-import logging
-from tqdm import tqdm
-from model import Model
-from blocks_gui.general_gui import *
 from thesis_constants import *
 from YacrafModel import YacrafModel
 from typing import Any, Iterable
-
-logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
 
 def create_attack_graphs(model, attack_graph_file: str):
     """
@@ -22,7 +15,9 @@ def create_attack_graphs(model, attack_graph_file: str):
 
     # read the file into a tree representation
     yacraf_instance : YacrafModel = file_to_yacraf_instance(attack_graph_file)
-    yacraf_instance.plot(model)
+    if yacraf_instance.isValid():
+        # isValid() recursively notifies the user of all possible incompatibilities with the YACRAF model
+        yacraf_instance.plot(model)
 
 def parse_json(filename: str) -> tuple[
     dict[str, Any],  # attack_events

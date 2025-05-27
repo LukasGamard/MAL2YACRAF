@@ -5,12 +5,15 @@ from setup_attribute_gui import GUISetupAttribute
 from circle_indicator_gui import GUICircleIndicator
 from options import Options
 from config import *
+import logging
 
 class GUISetupClass(GUIClass):
     """
     Manages a GUI setup class
     """
     def __init__(self, model, view, setup_class, configuration_class_gui, *, position=None, linked_group_number=None):
+        logger = logging.getLogger(__name__)
+        logger.debug(f"Creating GUISetupClass with {setup_class._SetupClass__instance_name=}")
         self.__setup_class = setup_class
         self.__configuration_class_gui = configuration_class_gui
         self.__setup_attributes_gui = []
@@ -24,6 +27,7 @@ class GUISetupClass(GUIClass):
         # Create all GUI setup attributes, with the exception of hidden ones
         for setup_attribute, configuration_attribute_gui in zip(self.__setup_class.get_setup_attributes(), self.__configuration_class_gui.get_configuration_attributes_gui()):
             if not configuration_attribute_gui.is_hidden():
+                logger.debug(f"Creating GUISetupAttribute with {setup_attribute._SetupAttribute__value=}")
                 self.create_setup_attribute_gui(setup_attribute, configuration_attribute_gui)
                 
         self.update_text()

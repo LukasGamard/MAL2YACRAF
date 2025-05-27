@@ -1,26 +1,16 @@
 from __future__ import annotations
+import copy
+import logging
 from abc import abstractmethod
 from thesis_constants import *
 from queue import SimpleQueue
 from blocks_gui.setup.setup_class_gui import GUISetupClass
-from blocks_gui.connection.connection_with_blocks_gui import GUIConnectionWithBlocks, GUIConnection
 from views.setup_view import SetupView
 from views.configuration_view import ConfigurationView
 from blocks_gui.configuration.configuration_class_gui import GUIConfigurationClass
 from typing import Any, Iterable, Iterator
-import copy
 from model import Model
  
-def set_default_attribute_values(type, setup_class_gui):
-    # TODO refactor into different classes
-    attributes = setup_class_gui.get_setup_attributes_gui()
-    match type:
-        case String.AND | String.OR:
-            attributes[Attack_event_setup_attribute.LOCAL_DIFFICULTY].set_entry_value("1/2/3") # TODO adapt to actual value
-            return
-        case String.DEFENSE:
-            attributes[Defense_setup_attribute.COST].set_entry_value("10/20/30")
-            attributes[Defense_setup_attribute.IMPACT].set_entry_value("20/30/40")
 
 class YacrafModel:
     def __init__(self, attack_tree_roots, attack_events, defenses, abuse_cases, loss_events, attackers, actors):
@@ -36,6 +26,7 @@ class YacrafModel:
         self.defenses = [Defense(defense, self.attack_trees) for defense in defenses]
 
     def plot(self, model: Model):
+        logger = logging.getLogger(__name__) 
         # configuration classes defined in the yagraf model
         configuration_view : ConfigurationView = model.get_configuration_views()[Metamodel.YACRAF_1]
         configuration_classes_gui : list[GUIConfigurationClass]= configuration_view.get_configuration_classes_gui()
@@ -43,6 +34,7 @@ class YacrafModel:
         ## Plot all attack trees
         # one view per tree
         # create setup_classes for AttackEvents
+        logger.debug(f"Plotting {len(self.attack_trees)} attack trees")
         setup_views_attack_tree : list[SetupView] = []
         for attack_tree in self.attack_trees:
             setup_view_attack_tree : SetupView = model.create_view(False, f"Attack Tree: {attack_tree.data[String.NAME]}")
@@ -52,6 +44,7 @@ class YacrafModel:
         
         ## Plot all defenses in the same view
         # create setup_classes for Defenses, linked_setup_classes for AttackEvents
+        logger.debug(f"Plotting {len(self.defenses)} defenses")
         setup_view_defense : SetupView = model.create_view(False, f"Defense Mechanisms")
         for i, defense in enumerate(self.defenses):
             defense_position = (i*(Defense.width + AttackEvent.width + 4*Node.Padding.X), 0)
@@ -60,11 +53,13 @@ class YacrafModel:
         ## Plot the risk trees
         # one setup view per actor
         # create setup_classes for Actors, LossEvents, AbuseCases and Attackers
+        logger.debug(f"Plotting {len(self.risk_trees)} risk trees")
         for actor in self.risk_trees:
             setup_view_risk = model.create_view(False, f"Risk for {actor.data[String.NAME]}")
             actor.create_setup_class(setup_view_risk, configuration_classes_gui, (0, 0))
         
         ## Plot the abuse cases and loss events linked to the top of an attack tree
+        logger.debug(f"Plotting {len(self.attack_trees)} attack trees with abuse cases and loss events")
         for attack_tree in self.attack_trees:
             for risk_tree in self.risk_trees:
                 setup_view_attack_tree_top_level : SetupView = model.create_view(False, f"Abuse Cases/Loss Events for actor {risk_tree.data[String.NAME]}")
@@ -72,59 +67,41 @@ class YacrafModel:
 
                 # link the root of the attack tree
                 linked_root : GUISetupClass = model.create_linked_setup_class_gui(attack_tree.setup_class_gui, setup_view_attack_tree_top_level, position=start_position)
+                attack_tree.set_attribute_values(linked_root) # need to manually set the attribute values
                 root_top_left_corner = Node.get_top_left_corner(start_position)
                 root_top_right_corner = Node.get_top_right_corner(start_position)
 
                 # Plot abuse cases
                 for i, abuse_case in enumerate(Actor.AbuseCaseIterable(risk_tree)):
+                    logger.debug(f"Copying abuse case {abuse_case.data[String.NAME]} for actor {risk_tree.data[String.NAME]}")
                     abuse_case_position = (start_position[0] - AbuseCase.width - 2*Node.Padding.X, start_position[1] + i*(AbuseCase.height + Node.Padding.Y))
                     linked_abuse_case : GUISetupClass = model.create_linked_setup_class_gui(abuse_case.setup_class_gui, setup_view_attack_tree_top_level, position=abuse_case_position)
+                    abuse_case.set_attribute_values(linked_abuse_case)
                     abuse_case_top_right_corner = Node.get_top_right_corner(abuse_case_position)
                     setup_view_attack_tree_top_level.create_connection_with_blocks(start_coordinate=abuse_case_top_right_corner, end_coordinate=root_top_left_corner)
                 
                 # Plot the loss events
                 for i, loss_event in enumerate(Actor.LossEventIterable(risk_tree)):
+                    logger.debug(f"Copying loss event {loss_event.data[String.NAME]} for actor {risk_tree.data[String.NAME]}")
                     loss_event_position = (start_position[0] + AttackEvent.width + 2*Node.Padding.X, start_position[1] + i*(LossEvent.height + Node.Padding.Y))
                     linked_loss_event : GUISetupClass = model.create_linked_setup_class_gui(loss_event.setup_class_gui, setup_view_attack_tree_top_level, position=loss_event_position)
+                    loss_event.set_attribute_values(linked_loss_event)
                     loss_event_top_left_corner = Node.get_top_left_corner(loss_event_position)
                     setup_view_attack_tree_top_level.create_connection_with_blocks(start_coordinate=root_top_right_corner, end_coordinate=loss_event_top_left_corner)
 
-
-        def isValid():
-            # TODO verify that all multiplicities in YACRAF are satisfied
-            return True
-        
-        # TODO remove?
-        def debug_print(self):
-            fifo = SimpleQueue()
-            fifo.put(self.root)
-            fifo.put(String.NEWLINE)
-            previous_node : Node = self.root
-            file = open("debug.txt", "w")
-            while not fifo.empty():
-                node = fifo.get()
-                if node == String.NEWLINE:
-                    print(file=file)
-                    continue
-                for child in node.children_nodes:
-                    fifo.put(child)
-                fifo.put(String.NEWLINE)
-                print(" "*max(0, node.grid_position[0]-previous_node.grid_position[0]) + f"{node.attack_event["id"]:3d}", end="", file=file)
-                previous_node = node
-            file.close()
+    def isValid(self) -> bool:
         """
-    def size(self):
-        return self.__root.size()
-    
-    def width(self):
-        return self.__root.width()
-"""
+        Check if the YACRAF model is valid.
+        """
+        validAttackEvents = all(attack_tree.isValid() for attack_tree in self.attack_trees)
+        validRiskTrees = all(actor.isValid() for actor in self.risk_trees)
+        
 
 class Node:
     """Base class for all nodes in the YACRAF model"""
     class Offset:
         """Offsets used for the connecting nodes"""
-        X = 1.0
+        X = 0.95
         Y = 0.25
 
     class Padding:
@@ -173,18 +150,7 @@ class Node:
     def get_bottom_middle(position):
         """Get the bottom middle of the node in order to draw a connection"""
         return (position[0] + Node.width/2, position[1] + Node.height + Node.Offset.Y)
-    
-"""
-    def size(self):
-        if not self.children_nodes:
-            return 1
-        return 1 + sum([child.size() for child in self.children_nodes])
-    
-    def width(self):
-        if not self.children_nodes:
-            return self.grid_position[0]
-        return max([child.width() for child in self.children_nodes])
-"""
+
 
 class AttackEvent(Node):
     """
@@ -246,9 +212,9 @@ class AttackEvent(Node):
                     self.setup_class_gui = setup_view.create_setup_class_gui(configuration_class_gui=configuration_classes_gui[Configuration_classes_gui.ATTACK_EVENT_OR], position=position)
                 
                 # Initialize its attribute values
+                self.set_attribute_values()
                 self.setup_class_gui.set_name(self.data[String.NAME])
                 self.setup_class_gui.update_text()
-                #set_default_attribute_values(type, self.setup_class_gui)
 
                 next_spot_on_same_row = (position[0] + AttackEvent.width + Node.Padding.X, position[1])
                 return next_spot_on_same_row
@@ -257,7 +223,6 @@ class AttackEvent(Node):
             next_available_child_position = (position[0], position[1] + AttackEvent.height + Node.Padding.Y)
             for child in self.children:   
                 next_available_child_position = child.create_setup_class(setup_view, configuration_classes_gui, position=next_available_child_position)              
-                setup_view.create_connection_with_blocks(start_coordinate=child.get_top_right_corner(), end_coordinate=self.get_top_left_corner())
 
         # Create a visual block representation
         type = self.data[String.TYPE]
@@ -266,8 +231,13 @@ class AttackEvent(Node):
         elif type == String.OR:
             self.setup_class_gui = setup_view.create_setup_class_gui(configuration_class_gui=configuration_classes_gui[Configuration_classes_gui.ATTACK_EVENT_OR], position=position)
         # Initialize its attribute values
+        self.set_attribute_values()
         self.setup_class_gui.set_name(self.data[String.NAME])
         self.setup_class_gui.update_text()
+
+        # Connect children to the parent
+        for child in self.children:
+            setup_view.create_connection_with_blocks(start_coordinate=child.get_top_right_corner(), end_coordinate=self.get_top_left_corner())
 
         if full_attack_tree:
             next_spot_on_same_row = (next_available_child_position[0] + 2*Node.Padding.X, position[1])
@@ -275,6 +245,15 @@ class AttackEvent(Node):
             next_spot_on_same_row = (position[0] + Node.Padding.X, position[1])
         return next_spot_on_same_row
 
+    def set_attribute_values(self, setup_class_gui=None):
+        """
+        Set the attribute values for the setup class.
+        If setup_class_gui is None, initialize attribute values for the setup_class_gui of the current instance.
+        Use the attribute values from the current instance.
+        """
+        attributes = self.setup_class_gui.get_setup_attributes_gui() if setup_class_gui is None else setup_class_gui.get_setup_attributes_gui()
+        attributes[Attack_event_setup_attribute.TYPE].set_entry_value(self.data[String.TYPE])
+        attributes[Attack_event_setup_attribute.LOCAL_DIFFICULTY].set_entry_value(self.data[String.LOCAL_DIFFICULTY])
 
     def get_top_left_corner(self):
         """Get the top left corner of the node in order to draw a connection"""
@@ -309,6 +288,7 @@ class Defense(Node):
 
     def create_setup_class(self, setup_view : SetupView, configuration_classes_gui : list[GUIConfigurationClass], position, model : Model):
         """create the setup representation for the node and add connections to its children"""
+        logger = logging.getLogger(__name__)
         self.grid_position = position
 
         # Create a block
@@ -316,7 +296,7 @@ class Defense(Node):
 
         self.setup_class_gui.set_name(self.data[String.NAME])
         self.setup_class_gui.update_text()
-        set_default_attribute_values(type, self.setup_class_gui)
+        self.set_attribute_values()
 
         # Create eventual children blocks and connections
         next_available_child_position = (self.grid_position[0] + 2*Node.Padding.X + Defense.width, self.grid_position[1])
@@ -324,10 +304,23 @@ class Defense(Node):
         for child in self.children:
             # stack the children
             linked_setup_class_gui = model.create_linked_setup_class_gui(child.setup_class_gui, setup_view, position=next_available_child_position)
-            set_default_attribute_values(child.data[String.TYPE], linked_setup_class_gui)
+            # set the attribute values for the linked setup class
+            # manually copy from the original setup class
+            logger.debug(f"Copying setup class {child.setup_class_gui.get_name()} for attack event {child.data[String.NAME]} for defense {self.data[String.NAME]}")
+            child.set_attribute_values(linked_setup_class_gui)
             child_top_left_corner = Node.get_top_left_corner(next_available_child_position)
             setup_view.create_connection_with_blocks(start_coordinate=top_right_corner, end_coordinate=child_top_left_corner)
             next_available_child_position = (next_available_child_position[0], next_available_child_position[1] + Node.Padding.X + AttackEvent.height)
+
+    def set_attribute_values(self, setup_class_gui=None):
+        """
+        Set the attribute values for the setup class.
+        If setup_class_gui is None, initialize attribute values for the setup_class_gui of the current instance.
+        Use the attribute values from the current instance.
+        """
+        attributes = self.setup_class_gui.get_setup_attributes_gui() if setup_class_gui is None else setup_class_gui.get_setup_attributes_gui()
+        attributes[Defense_setup_attribute.COST].set_entry_value(self.data[String.COST])
+        attributes[Defense_setup_attribute.IMPACT].set_entry_value(self.data[String.IMPACT])
 
     def get_top_left_corner(self):
         """Get the top left corner of the node in order to draw a connection"""
@@ -412,16 +405,30 @@ class Actor(Node):
         next_available_child_position = (position[0], position[1] + Actor.height + Node.Padding.Y)
         for child in self.children:   
             next_available_child_position = child.create_setup_class(setup_view, configuration_classes_gui, next_available_child_position)              
-            setup_view.create_connection_with_blocks(start_coordinate=child.get_top_right_corner(), end_coordinate=self.get_top_left_corner())
         
         # Create a visual block representation
         self.setup_class_gui : GUISetupClass = setup_view.create_setup_class_gui(configuration_class_gui=configuration_classes_gui[Configuration_classes_gui.ACTOR], position=position)
-        # Initialize its attribute values 
+
+        # Initialize attribute values 
         self.setup_class_gui.set_name(self.data[String.NAME])
         self.setup_class_gui.update_text()
+        self.set_attribute_values()
+
+        # Connect children to the parent
+        for child in self.children:
+            setup_view.create_connection_with_blocks(start_coordinate=child.get_top_right_corner(), end_coordinate=self.get_top_left_corner())
 
         next_spot_on_same_row = (next_available_child_position[0] + 2*Node.Padding.X, position[1])
         return next_spot_on_same_row
+
+    def set_attribute_values(self, setup_class_gui=None):
+        """
+        Set the attribute values for the setup class.
+        If setup_class_gui is None, initialize attribute values for the setup_class_gui of the current instance.
+        Use the attribute values from the current instance.
+        """
+        attributes = self.setup_class_gui.get_setup_attributes_gui() if setup_class_gui is None else setup_class_gui.get_setup_attributes_gui()
+        attributes[Actor_setup_attribute.TYPE].set_entry_value(self.data[String.TYPE])
 
     def get_top_left_corner(self):
         """Get the top left corner of the node in order to draw a connection"""
@@ -455,18 +462,30 @@ class LossEvent(Node):
         next_available_child_position = (position[0], position[1] + LossEvent.height + Node.Padding.Y)
         for child in self.children:
             next_available_child_position = child.create_setup_class(setup_view, configuration_classes_gui, next_available_child_position)
-            setup_view.create_connection_with_blocks(start_coordinate=child.get_top_right_corner(), end_coordinate=self.get_top_left_corner())
-
+        
         # Create a block
         self.setup_class_gui : GUISetupClass = setup_view.create_setup_class_gui(configuration_class_gui=configuration_classes_gui[Configuration_classes_gui.LOSS_EVENT], position=self.grid_position)
-        
         self.setup_class_gui.set_name(self.data[String.NAME])
         self.setup_class_gui.update_text()
-        #set_default_attribute_values(type, self.setup_class_gui)
+        self.set_attribute_values()
+
+        # Connect children to the parent
+        for child in self.children:
+            setup_view.create_connection_with_blocks(start_coordinate=child.get_top_right_corner(), end_coordinate=self.get_top_left_corner())
 
         next_spot_on_same_row = (next_available_child_position[0] + 2*Node.Padding.X, position[1])
         return next_spot_on_same_row
     
+    def set_attribute_values(self, setup_class_gui=None):
+        """
+        Set the attribute values for the setup class.
+        If setup_class_gui is None, initialize attribute values for the setup_class_gui of the current instance.
+        Use the attribute values from the current instance.
+        """
+        attributes = self.setup_class_gui.get_setup_attributes_gui() if setup_class_gui is None else setup_class_gui.get_setup_attributes_gui()
+        attributes[Loss_event_setup_attribute.TYPE].set_entry_value(self.data[String.TYPE])
+        attributes[Loss_event_setup_attribute.MAGNITUDE].set_entry_value(self.data[String.MAGNITUDE])
+
     def get_top_left_corner(self):
         """Get the top left corner of the node in order to draw a connection"""
         return (self.grid_position[0] - Node.Offset.X, self.grid_position[1] + Node.Offset.Y)
@@ -501,24 +520,42 @@ class AbuseCase(Node):
         """
         self.grid_position = position
 
-        # Plot the children
+        # Plot the child
         next_available_child_position = (position[0], position[1] + AbuseCase.height + Node.Padding.Y)
         self.child.create_setup_class(setup_view, configuration_classes_gui, position=next_available_child_position)
+
+        # Plot a block
+        self.setup_class_gui : GUISetupClass = setup_view.create_setup_class_gui(configuration_class_gui=configuration_classes_gui[Configuration_classes_gui.ABUSE_CASE], position=position)
+
+        # connect the child to the parent
         setup_view.create_connection_with_blocks(start_coordinate=self.child.get_top_right_corner(), end_coordinate=self.get_top_left_corner())
 
-        # Create a block
-        self.setup_class_gui : GUISetupClass = setup_view.create_setup_class_gui(configuration_class_gui=configuration_classes_gui[Configuration_classes_gui.ABUSE_CASE], position=position)
-        
         self.setup_class_gui.set_name(self.data[String.NAME])
+        self.set_attribute_values()
         self.setup_class_gui.update_text()
-        set_default_attribute_values(type, self.setup_class_gui)
 
         # Link Attacker in a tree structure
-        attacker_position = (self.grid_position[0], self.grid_position[1] + AbuseCase.height + Node.Padding.Y)
-        self.child.create_setup_class(setup_view, configuration_classes_gui, attacker_position)
-        setup_view.create_connection_with_blocks(start_coordinate=self.child.get_top_right_corner(), end_coordinate=self.get_top_left_corner())
+        #attacker_position = (self.grid_position[0], self.grid_position[1] + AbuseCase.height + Node.Padding.Y)
+        #self.child.create_setup_class(setup_view, configuration_classes_gui, attacker_position)
+        #setup_view.create_connection_with_blocks(start_coordinate=self.child.get_top_right_corner(), end_coordinate=self.get_top_left_corner())
         next_spot_on_same_row = (self.grid_position[0] + AbuseCase.width + 2*Node.Padding.X, self.grid_position[1])
         return next_spot_on_same_row
+
+    def set_attribute_values(self, setup_class_gui=None):
+        """
+        Set the attribute values for the setup class.
+        If setup_class_gui is None, initialize attribute values for the setup_class_gui of the current instance.
+        Use the attribute values from the current instance.
+        """
+        attributes = self.setup_class_gui.get_setup_attributes_gui() if setup_class_gui is None else setup_class_gui.get_setup_attributes_gui()
+        att = attributes[Abuse_case_setup_attribute.ACCESSIBILITY_TO_ATTACK_SURFACE]
+        #attributes[Abuse_case_setup_attribute.ACCESSIBILITY_TO_ATTACK_SURFACE].set_entry_value(self.data[String.ACCESSIBILITY_TO_ATTACK_SURFACE])
+        attributes[Abuse_case_setup_attribute.WINDOW_OF_OPPORTUNITY].set_entry_value(self.data[String.WINDOW_OF_OPPORTUNITY])
+        attributes[Abuse_case_setup_attribute.ABILITY_TO_REPUDIATE].set_entry_value(self.data[String.ABILITY_TO_REPUDIATE])
+        attributes[Abuse_case_setup_attribute.PERCEIVED_DETERRENCE].set_entry_value(self.data[String.PERCEIVED_DETERRENCE])
+        attributes[Abuse_case_setup_attribute.PERCEIVED_EASE_OF_ATTACK].set_entry_value(self.data[String.PERCEIVED_EASE_OF_ATTACK])
+        attributes[Abuse_case_setup_attribute.PERCEIVED_BENEFIT_OF_SUCCESS].set_entry_value(self.data[String.PERCEIVED_BENEFIT_OF_SUCCESS])
+        attributes[Abuse_case_setup_attribute.EFFORT_SPENT].set_entry_value(self.data[String.EFFORT_SPENT])
 
     def get_top_left_corner(self):
         """Get the top left corner of the node in order to draw a connection"""
@@ -552,7 +589,20 @@ class Attacker(Node):
 
         self.setup_class_gui.set_name(self.data[String.NAME])
         self.setup_class_gui.update_text()
-        #set_default_attribute_values(self.setup_class_gui)
+        self.set_attribute_values()
+
+    def set_attribute_values(self, setup_class_gui=None):
+        """
+        Set the attribute values for the setup class.
+        If setup_class_gui is None, initialize attribute values for the setup_class_gui of the current instance.
+        Use the attribute values from the current instance.
+        """
+        attributes = self.setup_class_gui.get_setup_attributes_gui() if setup_class_gui is None else setup_class_gui.get_setup_attributes_gui()
+        attributes[Attacker_setup_attribute.PERSONAL_RISK_TOLERANCE].set_entry_value(self.data[String.PERSONAL_RISK_TOLERANCE])
+        attributes[Attacker_setup_attribute.CONCERN_FOR_COLLATERAL_DAMAGE].set_entry_value(self.data[String.CONCERN_FOR_COLLATERAL_DAMAGE])
+        attributes[Attacker_setup_attribute.SKILL].set_entry_value(self.data[String.SKILL])
+        attributes[Attacker_setup_attribute.RESOURCES].set_entry_value(self.data[String.RESOURCES])
+        attributes[Attacker_setup_attribute.SPONSORSHIP].set_entry_value(self.data[String.SPONSORSHIP])
 
     def get_top_left_corner(self):
         """Get the top left corner of the node in order to draw a connection"""
