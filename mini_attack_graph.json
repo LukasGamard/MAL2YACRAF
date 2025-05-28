@@ -71,7 +71,7 @@
             "defense_status": "0.0",
             "is_viable": "True",
             "is_necessary": "False",
-            "local_difficulty": "1/3/5"
+            "local_difficulty": "2/3/8"
         },
         "Application 1:attemptUseVulnerability": {
             "id": 1,
@@ -151,8 +151,7 @@
             "is_necessary": "True",
             "tags": [
                 "entrypoint"
-            ],
-            "local_difficulty": "1/3/5"
+            ]
         },
         "Application 1:successfulReverseReach": {
             "id": 5,
@@ -172,8 +171,7 @@
             "is_necessary": "True",
             "tags": [
                 "hidden"
-            ],
-            "local_difficulty": "1/3/5"
+            ]
         },
         "Application 1:reverseReach": {
             "id": 6,
@@ -269,8 +267,7 @@
             "resources": 5,
             "sponsorship": 2,
             "abuse_cases": {
-                "0": "Block video streaming",
-                "2": "Lorem ipsum kiki"
+                "0": "Block video streaming"
             }
         },
         "Jean-Pierre": {
@@ -310,12 +307,12 @@
             "perceived_deterrence": 10,
             "perceived_ease_of_attack": 3,
             "perceived_benefit_of_success": 5,
-            "effort_spent": 4,
+            "effort_spent": "1/3/6",
             "attacker": {
                 "0": "Hacktivist"
             },
             "attack_steps": {
-                "1": "Application 1:notPresent"
+                "1": "Application 1:notPresent1"
             },
             "loss_events": {
                 "0": "Videos unavailable"
@@ -330,7 +327,7 @@
             "perceived_deterrence": 10,
             "perceived_ease_of_attack": 1,
             "perceived_benefit_of_success": 5,
-            "effort_spent": 4,
+            "effort_spent": "2/4/8",
             "attacker": {
                 "1": "Jean-Pierre"
             },
@@ -358,8 +355,7 @@
             },
             "abuse_cases": {
                 "0": "Block video streaming",
-                "1": "Music is bad",
-                "2": "Lorem ipsum kiki"
+                "1": "Music is bad"
             }
         },
         "Music unavailable": {
@@ -391,8 +387,7 @@
             },
             "abuse_cases": {
                 "0": "Block video streaming",
-                "1": "Music is bad",
-                "2": "Lorem ipsum kiki"
+                "1": "Music is bad"
             }
         }
     },

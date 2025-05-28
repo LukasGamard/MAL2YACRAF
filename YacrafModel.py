@@ -2,7 +2,7 @@ from __future__ import annotations
 import copy
 import logging
 from abc import abstractmethod
-from thesis_constants import *
+from pipeline_constants import *
 from queue import SimpleQueue
 from blocks_gui.setup.setup_class_gui import GUISetupClass
 from views.setup_view import SetupView
@@ -18,6 +18,7 @@ class YacrafModel:
         Instantiate all elements in the YACRAF model
         Organize them in tree structures
         """
+
         # Recursively build the attack trees, adding children AttackEvents
         self.attack_trees = [AttackEvent(root, attack_events) for root in attack_tree_roots]
         # Recursively build the risk trees, adding children to each layer
@@ -40,7 +41,6 @@ class YacrafModel:
             setup_view_attack_tree : SetupView = model.create_view(False, f"Attack Tree: {attack_tree.data[String.NAME]}")
             setup_views_attack_tree.append(setup_view_attack_tree)
             attack_tree.create_setup_class(setup_view_attack_tree, configuration_classes_gui, (0, 0))
-            #setup_view_attack_tree.set_excluded(True) # don't want to show full attack trees
         
         ## Plot all defenses in the same view
         # create setup_classes for Defenses, linked_setup_classes for AttackEvents
@@ -72,7 +72,14 @@ class YacrafModel:
                 root_top_right_corner = Node.get_top_right_corner(start_position)
 
                 # Plot abuse cases
+                seen_abuse_cases = set()
                 for i, abuse_case in enumerate(Actor.AbuseCaseIterable(risk_tree)):
+                    # only want unique abuse cases
+                    if abuse_case.id in seen_abuse_cases:
+                        logger.debug(f"Skipping already seen abuse case {abuse_case.data[String.NAME]} for actor {risk_tree.data[String.NAME]}")
+                        continue
+                    seen_abuse_cases.add(abuse_case.id)
+
                     logger.debug(f"Copying abuse case {abuse_case.data[String.NAME]} for actor {risk_tree.data[String.NAME]}")
                     abuse_case_position = (start_position[0] - AbuseCase.width - 2*Node.Padding.X, start_position[1] + i*(AbuseCase.height + Node.Padding.Y))
                     linked_abuse_case : GUISetupClass = model.create_linked_setup_class_gui(abuse_case.setup_class_gui, setup_view_attack_tree_top_level, position=abuse_case_position)
@@ -88,13 +95,6 @@ class YacrafModel:
                     loss_event.set_attribute_values(linked_loss_event)
                     loss_event_top_left_corner = Node.get_top_left_corner(loss_event_position)
                     setup_view_attack_tree_top_level.create_connection_with_blocks(start_coordinate=root_top_right_corner, end_coordinate=loss_event_top_left_corner)
-
-    def isValid(self) -> bool:
-        """
-        Check if the YACRAF model is valid.
-        """
-        validAttackEvents = all(attack_tree.isValid() for attack_tree in self.attack_trees)
-        validRiskTrees = all(actor.isValid() for actor in self.risk_trees)
         
 
 class Node:
@@ -114,6 +114,7 @@ class Node:
 
     def __init__(self, data):
         self.data : dict[str, Any] = data
+        self.id : int = data[String.ID]
         self.children : list[Node]
         self.setup_class_gui : GUISetupClass
         self.grid_position : tuple[float, float]
@@ -253,7 +254,10 @@ class AttackEvent(Node):
         """
         attributes = self.setup_class_gui.get_setup_attributes_gui() if setup_class_gui is None else setup_class_gui.get_setup_attributes_gui()
         attributes[Attack_event_setup_attribute.TYPE].set_entry_value(self.data[String.TYPE])
-        attributes[Attack_event_setup_attribute.LOCAL_DIFFICULTY].set_entry_value(self.data[String.LOCAL_DIFFICULTY])
+        if String.LOCAL_DIFFICULTY in self.data and self.data[String.LOCAL_DIFFICULTY]:
+            attributes[Attack_event_setup_attribute.LOCAL_DIFFICULTY].set_entry_value(self.data[String.LOCAL_DIFFICULTY])
+        else:
+            attributes[Attack_event_setup_attribute.LOCAL_DIFFICULTY].set_entry_value("1/5/10")
 
     def get_top_left_corner(self):
         """Get the top left corner of the node in order to draw a connection"""
@@ -280,7 +284,6 @@ class Defense(Node):
         
         # Attack steps add themselves to this list upon instantiation
         self.children : list[AttackEvent] = []
-        tree : Tree[AttackEvent]
         for tree in attack_trees:
             for attack_event in tree:
                 if str(attack_event.data[String.ID]) in self.data[String.CHILDREN]:

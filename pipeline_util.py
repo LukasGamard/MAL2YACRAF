@@ -2,22 +2,19 @@
 from __future__ import annotations
 
 import json
-from thesis_constants import *
+from pipeline_constants import *
 from YacrafModel import YacrafModel
 from typing import Any, Iterable
 
-def create_attack_graphs(model, attack_graph_file: str):
+def create_yacraf_model(model, file_path: str):
     """
     INPUTS: model - YACRAF Model instance
-            attack_graph_file - name of a json file containing an attack graph from a compiled MAL DSL
-    SIDE-EFFECT: instanciate a attack graphs, every asset on a new setup view
+            file_path - name of a json file describing a YACRAF instance
+    SIDE-EFFECT: instanciate the YACRAF instance and plot it in the calculator
     """
-
     # read the file into a tree representation
-    yacraf_instance : YacrafModel = file_to_yacraf_instance(attack_graph_file)
-    if yacraf_instance.isValid():
-        # isValid() recursively notifies the user of all possible incompatibilities with the YACRAF model
-        yacraf_instance.plot(model)
+    yacraf_instance : YacrafModel = file_to_yacraf_instance(file_path)
+    yacraf_instance.plot(model)
 
 def parse_json(filename: str) -> tuple[
     dict[str, Any],  # attack_events
