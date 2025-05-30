@@ -31,6 +31,14 @@ class YacrafModel:
         self.attackers = attackers
         self.actors = actors
 
+        ## For each abuse case, ensure that there is a unique AttackEvent
+        # AttackEvents indeed need to be duplicated to reflect the different attackers
+        used_attack_events = set()
+        for abuse_case in self.abuse_cases.values():
+            for attack_event in abuse_case.data[String.ATTACK_STEPS]:
+                if 
+        # Whenever copying an AttackEvent, also copy its LossEvents (attacker-based AbuseCases should already be found in the input data)
+
         ## Recursively build the attack trees, adding children AttackEvents
         # Build as a tree to shortcut loops in the attack graph
         self.attack_trees = [root.build_attack_tree(self.attack_events) for root in attack_tree_roots]
@@ -589,12 +597,9 @@ class LossEvent(Node):
 class AbuseCase(Node):
     height = 11
 
-    def __init__(self, abuse_case_data):#, attackers_data):
+    def __init__(self, abuse_case_data):
         super().__init__(abuse_case_data)
-        #attacker_dict = abuse_case_data[String.ATTACKER]
-        #attacker_name = attacker_dict[next(iter(attacker_dict.keys()))]
-        # NOTE: unhandy code because of the json format trying to be consistent with the previous format
-        self.attacker : Attacker#= Attacker(attackers_data[attacker_name])
+        self.attacker : Attacker
         self.loss_events : list[LossEvent] = []
         self.attack_events : list[AttackEvent] = []
 
