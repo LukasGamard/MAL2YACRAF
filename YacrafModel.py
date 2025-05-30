@@ -30,12 +30,17 @@ class YacrafModel:
         self.loss_events = loss_events
         self.attackers = attackers
         self.actors = actors
-        # Recursively build the attack trees, adding children AttackEvents
-        self.attack_trees = [root.build_attack_tree(self.attack_events) for root in attack_tree_roots]
-        # Recursively build the risk trees, adding children to each layer
-        self.risk_trees = [actor.build_risk_tree(loss_events, abuse_cases, attackers) for id, actor in self.actors.items()]
-        # Build defense trees by linking the attack events to the defenses
 
+        ## Recursively build the attack trees, adding children AttackEvents
+        # Build as a tree to shortcut loops in the attack graph
+        self.attack_trees = [root.build_attack_tree(self.attack_events) for root in attack_tree_roots]
+        
+        ## Connect the remaining elements in the model
+        # Attack_events get connected through defenses, abuse_cases and loss_events
+        self.defenses = {id: defense.connect(self.attack_events) for id, defense in self.defenses.items()}
+        self.actors = {id: actor.connect(self.loss_events) for id, actor in self.actors.items()}
+        self.loss_events = {id: loss_event.connect(self.abuse_cases, self.attack_events) for id, loss_event in self.loss_events.items()}
+        self.abuse_cases = {id: abuse_case.connect(self.attackers, attack_events) for id, abuse_case in self.abuse_cases.items()}
 
     def plot(self, model: Model):
         logger = logging.getLogger(__name__) 
@@ -50,7 +55,6 @@ class YacrafModel:
         #setup_views_attack_tree : list[SetupView] = []
         for attack_tree in self.attack_trees:
             setup_view_attack_tree : SetupView = model.create_view(False, f"Attack Tree: {attack_tree.data[String.NAME]}")
-            #setup_views_attack_tree.append(setup_view_attack_tree)
             attack_tree.create_setup_class(setup_view_attack_tree, configuration_classes_gui, (0, 0))
         
         ## Plot all defenses in the same view
@@ -58,7 +62,7 @@ class YacrafModel:
         logger.debug(f"Plotting {len(self.defenses)} defenses")
         setup_view_defense : SetupView = model.create_view(False, f"Defense Mechanisms")
         position_offset = 0
-        for id, defense in self.defenses.items():
+        for defense in self.defenses.values():
             defense_position = (position_offset*(Defense.width + AttackEvent.width + 4*Node.Padding.X), 0)
             defense.create_setup_class(setup_view_defense, configuration_classes_gui, defense_position, model)
             position_offset += 1
@@ -66,57 +70,44 @@ class YacrafModel:
         ## Plot the risk trees
         # one setup view per actor
         # create setup_classes for Actors, LossEvents, AbuseCases and Attackers
-        logger.debug(f"Plotting {len(self.risk_trees)} risk trees")
-        for actor in self.risk_trees:
+        logger.debug(f"Plotting {len(self.actors)} risk trees")
+        for actor in self.actors.values():
             setup_view_risk = model.create_view(False, f"Risk for {actor.data[String.NAME]}")
             actor.create_setup_class(setup_view_risk, configuration_classes_gui, (0, 0))
         
         ## Link attack events to loss events
-        # TODO: continue
-        logger.debug("Linking attack events to loss events")
-        for risk_tree in self.risk_trees:
+        logger.debug("Linking loss events to attacke events and abuse cases")
+        for actor in self.actors.values():
             # one view per actor
-            setup_view_attack_tree_top_level : SetupView = model.create_view(False, f"Abuse Cases/Loss Events for actor {risk_tree.data[String.NAME]}")            for loss_event in risk_tree:
-                for loss_event in Actor.AbuseCaseIterator(risk_tree):
-                    for abuse_case in loss_event.children:
-
-        ## Plot the abuse cases and loss events linked to the top of an attack tree
-        for attack_tree in self.attack_trees:
-            for risk_tree in self.risk_trees:
-                setup_view_attack_tree_top_level : SetupView = model.create_view(False, f"Abuse Cases/Loss Events for actor {risk_tree.data[String.NAME]}")
-                start_position = (0, 0)
-
-                # link the root of the attack tree
-                linked_root : GUISetupClass = model.create_linked_setup_class_gui(attack_tree.setup_class_gui, setup_view_attack_tree_top_level, position=start_position)
-                attack_tree.set_attribute_values(linked_root) # need to manually set the attribute values
-                root_top_left_corner = Node.get_top_left_corner(start_position)
-                root_top_right_corner = Node.get_top_right_corner(start_position)
-
-                # Plot abuse cases
-                seen_abuse_cases = set()
-                for i, abuse_case in enumerate(Actor.AbuseCaseIterable(risk_tree)):
-                    # only want unique abuse cases
-                    if abuse_case.id in seen_abuse_cases:
-                        logger.debug(f"Skipping already seen abuse case {abuse_case.data[String.NAME]} for actor {risk_tree.data[String.NAME]}")
-                        continue
-                    seen_abuse_cases.add(abuse_case.id)
-
-                    logger.debug(f"Copying abuse case {abuse_case.data[String.NAME]} for actor {risk_tree.data[String.NAME]}")
-                    abuse_case_position = (start_position[0] - AbuseCase.width - 2*Node.Padding.X, start_position[1] + i*(AbuseCase.height + Node.Padding.Y))
-                    linked_abuse_case : GUISetupClass = model.create_linked_setup_class_gui(abuse_case.setup_class_gui, setup_view_attack_tree_top_level, position=abuse_case_position)
-                    abuse_case.set_attribute_values(linked_abuse_case)
-                    abuse_case_top_right_corner = Node.get_top_right_corner(abuse_case_position)
-                    setup_view_attack_tree_top_level.create_connection_with_blocks(start_coordinate=abuse_case_top_right_corner, end_coordinate=root_top_left_corner)
-                
-                # Plot the loss events
-                for i, loss_event in enumerate(Actor.LossEventIterable(risk_tree)):
-                    logger.debug(f"Copying loss event {loss_event.data[String.NAME]} for actor {risk_tree.data[String.NAME]}")
-                    loss_event_position = (start_position[0] + AttackEvent.width + 2*Node.Padding.X, start_position[1] + i*(LossEvent.height + Node.Padding.Y))
+            setup_view_attack_tree_top_level : SetupView = model.create_view(False, f"Abuse Cases/Loss Events for actor {actor.data[String.NAME]}")            
+            # Calulator allows to fan out **after** the LossEvent level
+            loss_event_position = (3* LossEvent.width + 4*Node.Padding.X, 0)
+            for loss_event in Actor.LossEventIterator(actor):
+                for attack_event in loss_event.attack_events:
+                    # Copy the loss_event from the risk tree
                     linked_loss_event : GUISetupClass = model.create_linked_setup_class_gui(loss_event.setup_class_gui, setup_view_attack_tree_top_level, position=loss_event_position)
-                    loss_event.set_attribute_values(linked_loss_event)
+                    loss_event.set_attribute_values(linked_loss_event) # copy values over
                     loss_event_top_left_corner = Node.get_top_left_corner(loss_event_position)
-                    setup_view_attack_tree_top_level.create_connection_with_blocks(start_coordinate=root_top_right_corner, end_coordinate=loss_event_top_left_corner)
-        
+
+                    # Link the attack event to the loss event
+                    attack_event_position = (loss_event_position[0] - AttackEvent.width - 2*Node.Padding.X, loss_event_position[1])
+                    linked_attack_event : GUISetupClass = model.create_linked_setup_class_gui(attack_event.setup_class_gui, setup_view_attack_tree_top_level, position=attack_event_position)
+                    attack_event.set_attribute_values(linked_attack_event)
+                    # Create a connection from the attack event to the loss event
+                    attack_event_top_right_corner = Node.get_top_right_corner(attack_event_position)
+                    setup_view_attack_tree_top_level.create_connection_with_blocks(start_coordinate=attack_event_top_right_corner, end_coordinate=loss_event_top_left_corner)
+
+                    # Link the attack event to its abuse case
+                    abuse_case_position = (attack_event_position[0] - AbuseCase.width - 2*Node.Padding.X, attack_event_position[1])
+                    linked_abuse_case : GUISetupClass = model.create_linked_setup_class_gui(attack_event.abuse_case.setup_class_gui, setup_view_attack_tree_top_level, position=abuse_case_position)
+                    attack_event.abuse_case.set_attribute_values(linked_abuse_case)
+                    linked_abuse_case_top_right_corner = Node.get_top_right_corner(abuse_case_position)
+                    attack_event_top_left_corner = Node.get_top_left_corner(attack_event_position)
+                    # Create a connection from the abuse case to the attack event
+                    setup_view_attack_tree_top_level.create_connection_with_blocks(start_coordinate=linked_abuse_case_top_right_corner, end_coordinate=attack_event_top_left_corner)
+                    attack_event_position = (attack_event_position[0], attack_event_position[1] + AttackEvent.height + Node.Padding.Y)
+
+                    loss_event_position = (loss_event_position[0], loss_event_position[1] + LossEvent.height + Node.Padding.Y)
 
 class Node:
     """Base class for all nodes in the YACRAF model"""
@@ -136,7 +127,6 @@ class Node:
     def __init__(self, data):
         self.data : dict[str, Any] = data
         self.id : int = data[String.ID]
-        #self.children : list[Node]
         self.setup_class_gui : GUISetupClass
         self.grid_position : tuple[float, float]
 
@@ -182,7 +172,7 @@ class AttackEvent(Node):
 
     height = 5
 
-    def __init__(self, data)#, attack_events, ancestors=None):
+    def __init__(self, data):#, attack_events, ancestors=None):
         """Recursively build the tree that has this Node as its root"""
         super().__init__(data)
         self.children : list[AttackEvent]= []
@@ -190,9 +180,6 @@ class AttackEvent(Node):
         self.defenses : list[Defense] = []
         self.loss_events : list[LossEvent] = []
         self.abuse_case : AbuseCase
-
-        #if self.data[String.CHILDREN]:
-         #   self.__add_children_nodes(attack_events)
     
     def build_attack_tree(self, attack_events : dict[int, AttackEvent], ancestors=None) -> AttackEvent:
         """recursive bottom-up process to pull and connect children attack_events"""
@@ -221,7 +208,7 @@ class AttackEvent(Node):
     
     def create_setup_class(self, setup_view : SetupView, configuration_classes_gui : list[GUIConfigurationClass], position, full_attack_tree=True) -> tuple[float, float]:
         """
-        create the setup representation for the node and add connections to its children        
+        Recursively create the setup representation for the node and add connections to its children        
         OUTPUT: next available position for the sub-tree on the same level
         """
         self.grid_position = position
@@ -304,17 +291,11 @@ class AttackEvent(Node):
 class Defense(Node):
     height = 3
 
-    def __init__(self, defense_data)#, attack_trees : list[AttackEvent]):
+    def __init__(self, defense_data):#, attack_trees : list[AttackEvent]):
         super().__init__(defense_data)
-        
-        # Attack steps add themselves to this list upon instantiation
         self.attack_events : list[AttackEvent] = []
-        #for tree in attack_trees:
-         #   for attack_event in tree:
-          #      if str(attack_event.data[String.ID]) in self.data[String.CHILDREN]:
-           #         self.attack_events.append(attack_event)
 
-    def build_defense_tree(self, attack_events : dict[int, AttackEvent]) -> Defense:
+    def connect(self, attack_events : dict[int, AttackEvent]) -> Defense:
         """
         Build the defense tree by adding children AttackEvents.
         This is a bottom-up process, starting from the leaf nodes.
@@ -322,8 +303,9 @@ class Defense(Node):
         # base case: no children
         for id, name in self.data[String.CHILDREN].items():
             if int(id) in attack_events:
-                # add the attack event to the defense
+                # add the attack event to the defense and vice-versa
                 self.attack_events.append(attack_events[int(id)])
+                attack_events[int(id)].defenses.append(self)
         
         return self
     
@@ -340,18 +322,18 @@ class Defense(Node):
         self.set_attribute_values()
 
         # Create eventual children blocks and connections
-        next_available_child_position = (self.grid_position[0] + 2*Node.Padding.X + Defense.width, self.grid_position[1])
+        next_available_attack_event_position = (self.grid_position[0] + 2*Node.Padding.X + Defense.width, self.grid_position[1])
         top_right_corner = self.get_top_right_corner()
-        for child in self.children:
-            # stack the children
-            linked_setup_class_gui = model.create_linked_setup_class_gui(child.setup_class_gui, setup_view, position=next_available_child_position)
+        for attack_event in self.attack_events:
+            # stack the attack_events
+            linked_setup_class_gui = model.create_linked_setup_class_gui(attack_event.setup_class_gui, setup_view, position=next_available_attack_event_position)
             # set the attribute values for the linked setup class
             # manually copy from the original setup class
-            logger.debug(f"Copying setup class {child.setup_class_gui.get_name()} for attack event {child.data[String.NAME]} for defense {self.data[String.NAME]}")
-            child.set_attribute_values(linked_setup_class_gui)
-            child_top_left_corner = Node.get_top_left_corner(next_available_child_position)
-            setup_view.create_connection_with_blocks(start_coordinate=top_right_corner, end_coordinate=child_top_left_corner)
-            next_available_child_position = (next_available_child_position[0], next_available_child_position[1] + Node.Padding.X + AttackEvent.height)
+            logger.debug(f"Copying setup class {attack_event.setup_class_gui.get_name()} for attack event {attack_event.data[String.NAME]} for defense {self.data[String.NAME]}")
+            attack_event.set_attribute_values(linked_setup_class_gui)
+            attack_event_top_left_corner = Node.get_top_left_corner(next_available_attack_event_position)
+            setup_view.create_connection_with_blocks(start_coordinate=top_right_corner, end_coordinate=attack_event_top_left_corner)
+            next_available_attack_event_position = (next_available_attack_event_position[0], next_available_attack_event_position[1] + Node.Padding.X + AttackEvent.height)
 
     def set_attribute_values(self, setup_class_gui=None):
         """
@@ -430,10 +412,24 @@ class Actor(Node):
             else:
                 raise StopIteration
 
-    def __init__(self, actor_data)#, loss_events_data, abuse_cases_data, attackers_data):
+    def __init__(self, actor_data):#, loss_events_data, abuse_cases_data, attackers_data):
         super().__init__(actor_data)
         self.loss_events : list[LossEvent] = []#[LossEvent(loss_events_data[id], abuse_cases_data, attackers_data) for id in actor_data[String.LOSS_EVENTS].keys()]
 
+    def connect(self, loss_events : dict[int, LossEvent]) -> Actor:
+        """
+        Build the actor tree by adding children LossEvents.
+        This is a bottom-up process, starting from the leaf nodes.
+        """
+        # base case: no children
+        for id, name in self.data[String.LOSS_EVENTS].items():
+            if int(id) in loss_events:
+                # add the loss event to the actor and vice-versa
+                self.loss_events.append(loss_events[int(id)])
+                loss_events[int(id)].actor = self
+        
+        return self
+    
     def build_risk_tree(self,
                         loss_events : dict[int, LossEvent],
                         abuse_cases : dict[int, AbuseCase],
@@ -447,7 +443,7 @@ class Actor(Node):
                 loss_event_instance = loss_events[int(id)]
                 self.loss_events.append(loss_event_instance)
                 # add the abuse cases and attackers to the loss event
-                for abuse_case_id in loss_event.data[String.ABUSE_CASES]:
+                for abuse_case_id in loss_event_instance.data[String.ABUSE_CASES]:
                     if int(abuse_case_id) in abuse_cases:
                         abuse_case_instance = abuse_cases[int(abuse_case_id)]
                         loss_event_instance.abuse_cases.append(abuse_case_instance)
@@ -516,11 +512,30 @@ class Actor(Node):
 class LossEvent(Node):
     height = 5
 
-    def __init__(self, loss_event_data)#, abuse_cases_data, attackers_data):
+    def __init__(self, loss_event_data):#, abuse_cases_data, attackers_data):
         super().__init__(loss_event_data)
         self.abuse_cases : list[AbuseCase] = []#[AbuseCase(abuse_cases_data[id], attackers_data) for id in loss_event_data[String.ABUSE_CASES].keys()]
         self.attack_events : list[AttackEvent] = []
         self.actor : Actor
+    
+    def connect(self, abuse_cases : dict[int, AbuseCase], attack_events : dict[int, AttackEvent]) -> LossEvent:
+        """
+        Build the loss event tree by adding children AbuseCases and AttackEvents.
+        This is a bottom-up process, starting from the leaf nodes.
+        """
+        for id, name in self.data[String.ABUSE_CASES].items():
+            if int(id) in abuse_cases:
+                # add the abuse case to the loss event and vice-versa
+                self.abuse_cases.append(abuse_cases[int(id)])
+                abuse_cases[int(id)].loss_events.append(self)
+        
+        for id, name in self.data[String.ATTACK_STEPS].items():
+            if int(id) in attack_events:
+                # add the attack event to the loss event and vice-versa
+                self.attack_events.append(attack_events[int(id)])
+                attack_events[int(id)].loss_events.append(self)
+
+        return self
     
     def create_setup_class(self, setup_view : SetupView, configuration_classes_gui : list[GUIConfigurationClass], position):
         """In the contest of a risk tree, create the setup representation for the node and add connections to its children"""
@@ -574,7 +589,7 @@ class LossEvent(Node):
 class AbuseCase(Node):
     height = 11
 
-    def __init__(self, abuse_case_data)#, attackers_data):
+    def __init__(self, abuse_case_data):#, attackers_data):
         super().__init__(abuse_case_data)
         #attacker_dict = abuse_case_data[String.ATTACKER]
         #attacker_name = attacker_dict[next(iter(attacker_dict.keys()))]
@@ -583,6 +598,30 @@ class AbuseCase(Node):
         self.loss_events : list[LossEvent] = []
         self.attack_events : list[AttackEvent] = []
 
+    def connect(self, attackers : dict[int, Attacker], attack_events : dict[int, AttackEvent]) -> AbuseCase:
+        """
+        Build the abuse case tree by adding an attacker.
+        This is a bottom-up process, starting from the leaf nodes.
+        """
+        # Connect attacker
+        # NOTE: the attacker is a dictionary with a single key, so we can just take the first one
+        attacker_dict = self.data[String.ATTACKER]
+        attacker_id = int(next(iter(attacker_dict.keys())))
+        if attacker_id in attackers:
+            # add the attacker to the abuse case and vice-versa
+            self.attacker = attackers[attacker_id]
+            self.attacker.abuse_cases.append(self)
+        
+        # Connect attack_events
+        for id, name in self.data[String.ATTACK_STEPS].items():
+            if int(id) in attack_events:
+                # add the attack event to the abuse case and vice-versa
+                self.attack_events.append(attack_events[int(id)])
+                attack_events[int(id)].abuse_case = self
+
+        # loss_events already connected to the abuse case in LossEvent.connect()
+        return self
+    
     def create_setup_class(self, setup_view : SetupView, configuration_classes_gui : list[GUIConfigurationClass], position):
         """
         In the context of a risk tree, create the setup representation for the node and add connections to its children

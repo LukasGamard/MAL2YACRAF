@@ -53,7 +53,7 @@ def file_to_yacraf_instance(filename: str) -> list:
 
     attack_events, defenses, attackers, abuse_cases, loss_events, actors = parse_json(filename)
 
-    attack_tree_roots = [attack_event for id, attack_event in attack_events.items() if not attack_event[String.PARENTS]]
+    attack_tree_roots = [attack_event for id, attack_event in attack_events.items() if not attack_event.data[String.PARENTS]]
 
     yacraf_instance = YacrafModel(attack_tree_roots, attack_events, defenses, abuse_cases, loss_events, attackers, actors)
 
