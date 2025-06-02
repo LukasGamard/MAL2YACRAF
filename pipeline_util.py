@@ -1,10 +1,11 @@
 # allow forward references for type hints
 from __future__ import annotations
-
+import sys
 import json
 from pipeline_constants import *
 from YacrafModel import YacrafModel, AttackEvent, Defense, Actor, AbuseCase, LossEvent, Attacker
-from typing import Any, Iterable
+import logging
+logger = logging.getLogger(__name__)
 
 def create_yacraf_model(model, file_path: str):
     """
@@ -14,7 +15,11 @@ def create_yacraf_model(model, file_path: str):
     """
     # read the file into a tree representation
     yacraf_instance : YacrafModel = file_to_yacraf_instance(file_path)
-    yacraf_instance.plot(model)
+    if yacraf_instance.isValid():
+        yacraf_instance.plot(model)
+    else:
+        logger.error("The YACRAF instance is not valid. Please check the input file. See logs for more information.")
+        sys.exit(1)
 
 def parse_json(filename: str) -> tuple[
     dict[int, AttackEvent],  # attack_events

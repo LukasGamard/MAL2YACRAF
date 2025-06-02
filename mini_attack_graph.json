@@ -61,7 +61,9 @@
                 "9": "Application 1:networkConnectInspected"
             },
             "parents": {},
-            "compromised_by": [],
+            "compromised_by": [
+                "Hacktivist"
+            ],
             "asset": "Application 1",
             "defense_status": "0.0",
             "is_viable": "True",
@@ -81,7 +83,9 @@
             "parents": {
                 "2": "Application 1:successfulUseVulnerability"
             },
-            "compromised_by": [],
+            "compromised_by": [
+                "Hacktivist"
+            ],
             "asset": "Application 1",
             "is_viable": "True",
             "is_necessary": "True",
@@ -262,38 +266,13 @@
             "resources": 3,
             "sponsorship": 1,
             "abuse_cases": {
-                "0": "Block video streaming"
-            }
-        },
-        "State actor": {
-            "name": "Attacker:State actor",
-            "entry_points": {
-                "Hardware:1": {
-                    "asset_id": 1,
-                    "attack_steps": [
-                        "attemptSupplyChainAttack"
-                    ]
-                },
-                "SoftwareProduct:2": {
-                    "asset_id": 2,
-                    "attack_steps": [
-                        "compromiseApplications"
-                    ]
-                }
-            },
-            "id": 1,
-            "personal_risk_tolerance": 1,
-            "concern_for_collateral_damage": 7,
-            "skill": 9,
-            "resources": 7,
-            "sponsorship": 6,
-            "abuse_cases": {
-                "1": "Music is bad"
+                "0": "Block video streaming",
+                "1": "Block music streaming"
             }
         }
     },
     "abuse_cases": {
-        "Block video streaming_0": {
+        "Block video streaming": {
             "name": "Block video streaming",
             "id": 0,
             "accessibility_to_attack_surface": 3,
@@ -313,8 +292,8 @@
                 "0": "Videos unavailable"
             }
         },
-        "Block video streaming_1": {
-            "name": "Block video streaming",
+        "Block music streaming": {
+            "name": "Block music streaming",
             "id": 1,
             "accessibility_to_attack_surface": 7,
             "window_of_opportunity": 3,
@@ -324,34 +303,15 @@
             "perceived_benefit_of_success": 5,
             "effort_spent": "3/6/8",
             "attacker": {
-                "1": "State actor"
-            },
-            "attack_steps": {
-                "1": "Application 1:notPresent1"
-            },
-            "loss_events": {
-                "0": "Videos unavailable"
-            }
-        },
-        "Music is bad": {
-            "name": "Music is bad",
-            "id": 2,
-            "accessibility_to_attack_surface": 3.5,
-            "window_of_opportunity": 4,
-            "ability_to_repudiate": 2,
-            "perceived_deterrence": 10,
-            "perceived_ease_of_attack": 1,
-            "perceived_benefit_of_success": 5,
-            "effort_spent": "2/4/8",
-            "attacker": {
-                "1": "State actor"
+                "0": "Hacktivist"
             },
             "attack_steps": {
                 "0": "Application 1:notPresent"
             },
             "loss_events": {
+                "0": "Videos unavailable",
                 "1": "Music unavailable",
-                "2": "Lorem ipsum"
+                "2": "Adds unavailable"
             }
         }
     },
@@ -371,14 +331,14 @@
             },
             "abuse_cases": {
                 "0": "Block video streaming",
-                "1": "Music is bad"
+                "1": "Block music streaming"
             }
         },
         "Music unavailable": {
             "name": "Music unavailable",
             "id": 1,
             "type": "Productivity, Financial",
-            "magnitude": "0.2/1/1.4",
+            "magnitude": "2/3/5",
             "attack_steps": {
                 "0":"Application 1:notPresent",
                 "1": "Application 1:notPresent1"
@@ -387,25 +347,22 @@
                 "0": "User"
             },
             "abuse_cases": {
-                "0": "Block video streaming",
-                "1": "Music is bad"
+                "0": "Block video streaming"
             }
         },
-        "Lorem ipsum": {
-            "name": "Lorem ipsum",
+        "Adds unavailable": {
+            "name": "Adds unavailable",
             "id": 2,
-            "type": "Productivity, Financial",
-            "magnitude": "0.2/1/1.4",
+            "type": "Financial",
+            "magnitude": "3/6/8",
             "attack_steps": {
-                "0":"Application 1:notPresent",
                 "1": "Application 1:notPresent1"
             },
             "actor": {
-                "0": "User"
+                "1": "Company owner"
             },
             "abuse_cases": {
-                "0": "Block video streaming",
-                "1": "Music is bad"
+                "1": "Block music streaming"
             }
         }
     },
@@ -416,16 +373,16 @@
             "type": "Internal",
             "loss_events": {
                 "0": "Videos unavailable",
-                "2": "Lorem ipsum"
+                "1": "Music unavailable"
             }
         },
-        "Pascal": {
-            "name": "Pascal",
+        "Company owner": {
+            "name": "Company owner",
             "id": 1,
             "type": "External",
             "loss_events": {
                 "0": "Videos unavailable",
-                "1": "Music unavailable"
+                "2": "Lorem ipsum"
             }
         }
     }

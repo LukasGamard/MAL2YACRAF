@@ -31,14 +31,6 @@ class YacrafModel:
         self.attackers = attackers
         self.actors = actors
 
-        ## For each abuse case, ensure that there is a unique AttackEvent
-        # AttackEvents indeed need to be duplicated to reflect the different attackers
-        used_attack_events = set()
-        for abuse_case in self.abuse_cases.values():
-            for attack_event in abuse_case.data[String.ATTACK_STEPS]:
-                if 
-        # Whenever copying an AttackEvent, also copy its LossEvents (attacker-based AbuseCases should already be found in the input data)
-
         ## Recursively build the attack trees, adding children AttackEvents
         # Build as a tree to shortcut loops in the attack graph
         self.attack_trees = [root.build_attack_tree(self.attack_events) for root in attack_tree_roots]
@@ -49,6 +41,21 @@ class YacrafModel:
         self.actors = {id: actor.connect(self.loss_events) for id, actor in self.actors.items()}
         self.loss_events = {id: loss_event.connect(self.abuse_cases, self.attack_events) for id, loss_event in self.loss_events.items()}
         self.abuse_cases = {id: abuse_case.connect(self.attackers, attack_events) for id, abuse_case in self.abuse_cases.items()}
+
+    def isValid(self) -> bool:
+        """
+        Check if the model is valid.
+        A model is valid if it has a single attacker and respects the multiplicities in the YACRAF metamodel.
+        """
+        valid_attack_events = all(attack_event.isValid() for attack_event in self.attack_events.values())
+        valid_defense = all(defense.isValid() for defense in self.defenses.values())
+        valid_abuse_cases = all(abuse_case.isValid() for abuse_case in self.abuse_cases.values())
+        valid_loss_events = all(loss_event.isValid() for loss_event in self.loss_events.values())
+        valid_attacker = len(self.attackers) == 1 and all(attacker.isValid() for attacker in self.attackers.values())
+        valid_actors = all(actor.isValid() for actor in self.actors.values())
+        return (valid_attacker and valid_attack_events and valid_defense and
+                valid_abuse_cases and valid_loss_events and valid_actors)
+    
 
     def plot(self, model: Model):
         logger = logging.getLogger(__name__) 
@@ -85,20 +92,42 @@ class YacrafModel:
         
         ## Link attack events to loss events
         logger.debug("Linking loss events to attacke events and abuse cases")
+
+        already_linked_loss_events : dict[int, LossEvent]= {}  # to avoid linking the same loss event multiple times
+        already_linked_attack_events : dict[int, AttackEvent] = {}  # to avoid linking the same attack event multiple times
         for actor in self.actors.values():
             # one view per actor
             setup_view_attack_tree_top_level : SetupView = model.create_view(False, f"Abuse Cases/Loss Events for actor {actor.data[String.NAME]}")            
             # Calulator allows to fan out **after** the LossEvent level
             loss_event_position = (3* LossEvent.width + 4*Node.Padding.X, 0)
+
             for loss_event in Actor.LossEventIterator(actor):
+                if loss_event.id in already_linked_loss_events:
+                    # this loss event has already been linked to an attack event
+                    linked_loss_event : GUISetupClass = model.create_linked_setup_class_gui(already_linked_loss_events[loss_event.id].setup_class_gui, setup_view_attack_tree_top_level, position=loss_event_position)
+                    already_linked_loss_events[loss_event.id].set_attribute_values(linked_loss_event)
+                    # Nothing to connect here
+                    loss_event_position = (loss_event_position[0], loss_event_position[1] + LossEvent.height + Node.Padding.Y)                    
+                    continue
+
                 for attack_event in loss_event.attack_events:
                     # Copy the loss_event from the risk tree
                     linked_loss_event : GUISetupClass = model.create_linked_setup_class_gui(loss_event.setup_class_gui, setup_view_attack_tree_top_level, position=loss_event_position)
                     loss_event.set_attribute_values(linked_loss_event) # copy values over
                     loss_event_top_left_corner = Node.get_top_left_corner(loss_event_position)
 
-                    # Link the attack event to the loss event
                     attack_event_position = (loss_event_position[0] - AttackEvent.width - 2*Node.Padding.X, loss_event_position[1])
+
+                    # Link the attack event to the loss event
+                    if attack_event.id in already_linked_attack_events:
+                        # this attack event has already been linked to a loss event
+                        linked_attack_event : GUISetupClass = model.create_linked_setup_class_gui(already_linked_attack_events[attack_event.id].setup_class_gui, setup_view_attack_tree_top_level, position=loss_event_position)
+                        already_linked_attack_events[attack_event.id].set_attribute_values(linked_attack_event)
+                        # Connect to loss_event
+                        attack_event_top_right_corner = Node.get_top_right_corner(attack_event_position)
+                        setup_view_attack_tree_top_level.create_connection_with_blocks(start_coordinate=attack_event_top_right_corner, end_coordinate=loss_event_top_left_corner)
+                        continue
+
                     linked_attack_event : GUISetupClass = model.create_linked_setup_class_gui(attack_event.setup_class_gui, setup_view_attack_tree_top_level, position=attack_event_position)
                     attack_event.set_attribute_values(linked_attack_event)
                     # Create a connection from the attack event to the loss event
@@ -113,9 +142,13 @@ class YacrafModel:
                     attack_event_top_left_corner = Node.get_top_left_corner(attack_event_position)
                     # Create a connection from the abuse case to the attack event
                     setup_view_attack_tree_top_level.create_connection_with_blocks(start_coordinate=linked_abuse_case_top_right_corner, end_coordinate=attack_event_top_left_corner)
+                    
+                    
                     attack_event_position = (attack_event_position[0], attack_event_position[1] + AttackEvent.height + Node.Padding.Y)
-
                     loss_event_position = (loss_event_position[0], loss_event_position[1] + LossEvent.height + Node.Padding.Y)
+
+                    already_linked_attack_events[attack_event.id] = attack_event
+                already_linked_loss_events[loss_event.id] = loss_event
 
 class Node:
     """Base class for all nodes in the YACRAF model"""
@@ -142,7 +175,7 @@ class Node:
         return f"{self.__class__.__name__}:{self.data[String.ID]}"
     
     def __str__(self):
-        return f"{self.data[String.ID]}"
+        return f"id:{self.data[String.ID]}"
 
     @abstractmethod
     def create_setup_class(self, setup_view : SetupView, configuration_classes_gui : list[GUIConfigurationClass], position = None, model=None):
@@ -180,23 +213,39 @@ class AttackEvent(Node):
 
     height = 5
 
-    def __init__(self, data):#, attack_events, ancestors=None):
+    def __init__(self, data):
         """Recursively build the tree that has this Node as its root"""
         super().__init__(data)
         self.children : list[AttackEvent]= []
-        self.ancestors : list[int] = []#ancestors
+        self.ancestors : list[int] = []
         self.defenses : list[Defense] = []
         self.loss_events : list[LossEvent] = []
-        self.abuse_case : AbuseCase
+        self.abuse_case : AbuseCase = None
     
+    def isValid(self) -> bool:
+        """
+        Check if the attack event is valid.
+        An attack event is valid if it respects YACRAF multiplicities.
+        """
+        # The composition requirement doesn't induce a multiplicity constraint
+        if len(self.ancestors) > 0:
+            return True
+        
+        # Only the root of the attack tree has a corresponding abuse case
+        is_valid = self.abuse_case is not None
+        if not is_valid:
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Attack event id:{self.data[String.ID]} is not valid: it is a root of an attack tree but has no abuse case.")
+        return is_valid
+
     def build_attack_tree(self, attack_events : dict[int, AttackEvent], ancestors=None) -> AttackEvent:
         """recursive bottom-up process to pull and connect children attack_events"""
-        # base case: no children
+        self.ancestors : list = copy.deepcopy(ancestors) if ancestors else []
         for id, name in self.data[String.CHILDREN].items():
             if self.ancestors and int(id) in self.ancestors:
                 # avoid loops
                 return
-            ancestors : list = copy.deepcopy(self.ancestors) if self.ancestors else []
+            ancestors = self.ancestors
             ancestors.append(int(self.data[String.ID]))
             self.children.append(attack_events[int(id)].build_attack_tree(attack_events, ancestors=ancestors))
 
@@ -317,6 +366,13 @@ class Defense(Node):
         
         return self
     
+    def isValid(self) -> bool:
+        """
+        Check if the defense is valid.
+        A defense is valid if it respects YACRAF multiplicities.
+        """
+        return True
+    
     def create_setup_class(self, setup_view : SetupView, configuration_classes_gui : list[GUIConfigurationClass], position, model : Model):
         """create the setup representation for the node and add connections to its children"""
         logger = logging.getLogger(__name__)
@@ -424,6 +480,13 @@ class Actor(Node):
         super().__init__(actor_data)
         self.loss_events : list[LossEvent] = []#[LossEvent(loss_events_data[id], abuse_cases_data, attackers_data) for id in actor_data[String.LOSS_EVENTS].keys()]
 
+    def isValid(self) -> bool:
+        """
+        Check if the actor is valid.
+        An actor is valid if it respects YACRAF multiplicities.
+        """
+        return True
+    
     def connect(self, loss_events : dict[int, LossEvent]) -> Actor:
         """
         Build the actor tree by adding children LossEvents.
@@ -520,11 +583,22 @@ class Actor(Node):
 class LossEvent(Node):
     height = 5
 
-    def __init__(self, loss_event_data):#, abuse_cases_data, attackers_data):
+    def __init__(self, loss_event_data):
         super().__init__(loss_event_data)
-        self.abuse_cases : list[AbuseCase] = []#[AbuseCase(abuse_cases_data[id], attackers_data) for id in loss_event_data[String.ABUSE_CASES].keys()]
+        self.abuse_cases : list[AbuseCase] = []
         self.attack_events : list[AttackEvent] = []
-        self.actor : Actor
+        self.actor : Actor = None
+    
+    def isValid(self) -> bool:
+        """
+        Check if the loss event is valid.
+        A loss event is valid if it respects YACRAF multiplicities.
+        """
+        is_valid = len(self.abuse_cases) > 0 and len(self.attack_events) > 0 and self.actor is not None
+        if not is_valid:
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Loss event id:{self.data[String.ID]} is not valid: #abuse_cases={len(self.abuse_cases)}, #attack_events={len(self.attack_events)}, actor={self.actor}")
+        return is_valid
     
     def connect(self, abuse_cases : dict[int, AbuseCase], attack_events : dict[int, AttackEvent]) -> LossEvent:
         """
@@ -603,6 +677,17 @@ class AbuseCase(Node):
         self.loss_events : list[LossEvent] = []
         self.attack_events : list[AttackEvent] = []
 
+    def isValid(self) -> bool:
+        """
+        Check if the abuse case is valid.
+        An abuse case is valid if it respects YACRAF multiplicities.
+        """
+        is_valid = self.attacker is not None and len(self.loss_events) > 0 and len(self.attack_events) > 0
+        if not is_valid:
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Abuse case id:{self.data[String.ID]} is not valid: attacker={self.attacker}, #loss_events={len(self.loss_events)}, #attack_events={len(self.attack_events)}")
+        return is_valid
+    
     def connect(self, attackers : dict[int, Attacker], attack_events : dict[int, AttackEvent]) -> AbuseCase:
         """
         Build the abuse case tree by adding an attacker.
@@ -694,6 +779,17 @@ class Attacker(Node):
     def __init__(self, attacker_data):
         super().__init__(attacker_data)
         self.abuse_cases : list[AbuseCase] = []
+    
+    def isValid(self) -> bool:
+        """
+        Check if the attacker is valid.
+        An attacker is valid if it respects YACRAF multiplicities.
+        """
+        is_valid = len(self.abuse_cases) > 0
+        if not is_valid:
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Attacker id:{self.data[String.ID]} is not valid: it has no abuse cases")
+        return is_valid
     
     def create_setup_class(self, setup_view : SetupView, configuration_classes_gui : list[GUIConfigurationClass], position):
         """In the context of a risk tree, create the setup representation for the node and add connections to its children"""
