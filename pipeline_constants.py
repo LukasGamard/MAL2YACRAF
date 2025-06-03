@@ -17,7 +17,6 @@ class Configuration_classes_gui(int, Enum):
 
 class String(str, Enum):
     """String constants"""
-    # TODO split by usecase
     NEWLINE = "\n"
 
     # items in the attack_graph.json

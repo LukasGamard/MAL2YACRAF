@@ -107,7 +107,7 @@ class YacrafModel:
                     linked_loss_event : GUISetupClass = model.create_linked_setup_class_gui(already_linked_loss_events[loss_event.id].setup_class_gui, setup_view_attack_tree_top_level, position=loss_event_position)
                     already_linked_loss_events[loss_event.id].set_attribute_values(linked_loss_event)
                     # Nothing to connect here
-                    loss_event_position = (loss_event_position[0], loss_event_position[1] + LossEvent.height + Node.Padding.Y)                    
+                    loss_event_position = (loss_event_position[0], loss_event_position[1] + LossEvent.height + Node.Padding.Y)
                     continue
 
                 for attack_event in loss_event.attack_events:
@@ -121,11 +121,13 @@ class YacrafModel:
                     # Link the attack event to the loss event
                     if attack_event.id in already_linked_attack_events:
                         # this attack event has already been linked to a loss event
-                        linked_attack_event : GUISetupClass = model.create_linked_setup_class_gui(already_linked_attack_events[attack_event.id].setup_class_gui, setup_view_attack_tree_top_level, position=loss_event_position)
+                        linked_attack_event : GUISetupClass = model.create_linked_setup_class_gui(already_linked_attack_events[attack_event.id].setup_class_gui, setup_view_attack_tree_top_level, position=attack_event_position)
                         already_linked_attack_events[attack_event.id].set_attribute_values(linked_attack_event)
                         # Connect to loss_event
                         attack_event_top_right_corner = Node.get_top_right_corner(attack_event_position)
                         setup_view_attack_tree_top_level.create_connection_with_blocks(start_coordinate=attack_event_top_right_corner, end_coordinate=loss_event_top_left_corner)
+
+                        loss_event_position = (loss_event_position[0], loss_event_position[1] + AttackEvent.height + Node.Padding.Y)
                         continue
 
                     linked_attack_event : GUISetupClass = model.create_linked_setup_class_gui(attack_event.setup_class_gui, setup_view_attack_tree_top_level, position=attack_event_position)
@@ -143,9 +145,7 @@ class YacrafModel:
                     # Create a connection from the abuse case to the attack event
                     setup_view_attack_tree_top_level.create_connection_with_blocks(start_coordinate=linked_abuse_case_top_right_corner, end_coordinate=attack_event_top_left_corner)
                     
-                    
-                    attack_event_position = (attack_event_position[0], attack_event_position[1] + AttackEvent.height + Node.Padding.Y)
-                    loss_event_position = (loss_event_position[0], loss_event_position[1] + LossEvent.height + Node.Padding.Y)
+                    loss_event_position = (loss_event_position[0], loss_event_position[1] + AbuseCase.height + Node.Padding.Y)
 
                     already_linked_attack_events[attack_event.id] = attack_event
                 already_linked_loss_events[loss_event.id] = loss_event
@@ -180,8 +180,6 @@ class Node:
     @abstractmethod
     def create_setup_class(self, setup_view : SetupView, configuration_classes_gui : list[GUIConfigurationClass], position = None, model=None):
         """create the setup representation for the node and add connections to its children"""
-        # Create a block
-        # Create eventual children blocks and connections       
         pass
 
     @staticmethod
@@ -326,7 +324,7 @@ class AttackEvent(Node):
         if String.LOCAL_DIFFICULTY in self.data and self.data[String.LOCAL_DIFFICULTY]:
             attributes[Attack_event_setup_attribute.LOCAL_DIFFICULTY].set_entry_value(self.data[String.LOCAL_DIFFICULTY])
         else:
-            attributes[Attack_event_setup_attribute.LOCAL_DIFFICULTY].set_entry_value("1/5/10")
+            attributes[Attack_event_setup_attribute.LOCAL_DIFFICULTY].set_entry_value("2/5/8") # Eyeballed normal distribution
 
     def get_top_left_corner(self):
         """Get the top left corner of the node in order to draw a connection"""
@@ -348,7 +346,7 @@ class AttackEvent(Node):
 class Defense(Node):
     height = 3
 
-    def __init__(self, defense_data):#, attack_trees : list[AttackEvent]):
+    def __init__(self, defense_data):
         super().__init__(defense_data)
         self.attack_events : list[AttackEvent] = []
 
@@ -357,13 +355,11 @@ class Defense(Node):
         Build the defense tree by adding children AttackEvents.
         This is a bottom-up process, starting from the leaf nodes.
         """
-        # base case: no children
         for id, name in self.data[String.CHILDREN].items():
             if int(id) in attack_events:
                 # add the attack event to the defense and vice-versa
                 self.attack_events.append(attack_events[int(id)])
                 attack_events[int(id)].defenses.append(self)
-        
         return self
     
     def isValid(self) -> bool:
@@ -385,7 +381,7 @@ class Defense(Node):
         self.setup_class_gui.update_text()
         self.set_attribute_values()
 
-        # Create eventual children blocks and connections
+        # Create children
         next_available_attack_event_position = (self.grid_position[0] + 2*Node.Padding.X + Defense.width, self.grid_position[1])
         top_right_corner = self.get_top_right_corner()
         for attack_event in self.attack_events:
@@ -476,9 +472,9 @@ class Actor(Node):
             else:
                 raise StopIteration
 
-    def __init__(self, actor_data):#, loss_events_data, abuse_cases_data, attackers_data):
+    def __init__(self, actor_data):
         super().__init__(actor_data)
-        self.loss_events : list[LossEvent] = []#[LossEvent(loss_events_data[id], abuse_cases_data, attackers_data) for id in actor_data[String.LOSS_EVENTS].keys()]
+        self.loss_events : list[LossEvent] = []
 
     def isValid(self) -> bool:
         """
@@ -492,7 +488,6 @@ class Actor(Node):
         Build the actor tree by adding children LossEvents.
         This is a bottom-up process, starting from the leaf nodes.
         """
-        # base case: no children
         for id, name in self.data[String.LOSS_EVENTS].items():
             if int(id) in loss_events:
                 # add the loss event to the actor and vice-versa
@@ -734,9 +729,6 @@ class AbuseCase(Node):
         self.setup_class_gui.update_text()
 
         # Link Attacker in a tree structure
-        #attacker_position = (self.grid_position[0], self.grid_position[1] + AbuseCase.height + Node.Padding.Y)
-        #self.child.create_setup_class(setup_view, configuration_classes_gui, attacker_position)
-        #setup_view.create_connection_with_blocks(start_coordinate=self.child.get_top_right_corner(), end_coordinate=self.get_top_left_corner())
         next_spot_on_same_row = (self.grid_position[0] + AbuseCase.width + 2*Node.Padding.X, self.grid_position[1])
         return next_spot_on_same_row
 
@@ -747,8 +739,6 @@ class AbuseCase(Node):
         Use the attribute values from the current instance.
         """
         attributes = self.setup_class_gui.get_setup_attributes_gui() if setup_class_gui is None else setup_class_gui.get_setup_attributes_gui()
-        att = attributes[Abuse_case_setup_attribute.ACCESSIBILITY_TO_ATTACK_SURFACE]
-        #attributes[Abuse_case_setup_attribute.ACCESSIBILITY_TO_ATTACK_SURFACE].set_entry_value(self.data[String.ACCESSIBILITY_TO_ATTACK_SURFACE])
         attributes[Abuse_case_setup_attribute.WINDOW_OF_OPPORTUNITY].set_entry_value(self.data[String.WINDOW_OF_OPPORTUNITY])
         attributes[Abuse_case_setup_attribute.ABILITY_TO_REPUDIATE].set_entry_value(self.data[String.ABILITY_TO_REPUDIATE])
         attributes[Abuse_case_setup_attribute.PERCEIVED_DETERRENCE].set_entry_value(self.data[String.PERCEIVED_DETERRENCE])

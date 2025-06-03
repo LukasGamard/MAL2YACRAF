@@ -22,26 +22,22 @@ def create_yacraf_model(model, file_path: str):
         sys.exit(1)
 
 def parse_json(filename: str) -> tuple[
-    dict[int, AttackEvent],  # attack_events
-    dict[int, Defense],  # defenses
-    dict[int, Attacker],  # attackers
-    dict[int, AbuseCase],  # abuse_cases
-    dict[int, LossEvent],  # loss_events
-    dict[int, Actor]   # actors
+    dict[int, AttackEvent],
+    dict[int, Defense],
+    dict[int, Attacker],
+    dict[int, AbuseCase],
+    dict[int, LossEvent],
+    dict[int, Actor]
 ]:
     """
     INPUTS: path to attack_graph.json
     OUTPUTS: parsed json ojects representing the different items present in attack_graph.json
     """
     with open(filename) as file:
-        data = json.load(file)       
-        # The json file is a list of attack_events, each with its children
-        # We want to reorganize this into a tree
+        data = json.load(file)
 
-        # create a dictionary "id": "attack_event", keeping childless nodes separate. Used in AttackStep.__add_children_nodes()
-        # use str() because children ids are strings, avoids later typecast
+        # Convert the data into the appropriate classes
         attack_events = {int(attack_event[String.ID]):AttackEvent(attack_event) for name, attack_event in data[String.ATTACK_STEPS].items() if not attack_event[String.TYPE] == String.DEFENSE}
-        # create a dictionary "id": "defense", keeping childless nodes separate
         defenses = {int(attack_event[String.ID]):Defense(attack_event) for name, attack_event in data[String.ATTACK_STEPS].items() if attack_event[String.TYPE] == String.DEFENSE}
         attackers = {int(attacker[String.ID]):Attacker(attacker) for  name, attacker in data[String.ATTACKERS].items()}
         abuse_cases = {int(abuse_case[String.ID]):AbuseCase(abuse_case) for name, abuse_case in data[String.ABUSE_CASES].items()}
@@ -57,9 +53,7 @@ def file_to_yacraf_instance(filename: str) -> list:
     """
 
     attack_events, defenses, attackers, abuse_cases, loss_events, actors = parse_json(filename)
-
     attack_tree_roots = [attack_event for id, attack_event in attack_events.items() if not attack_event.data[String.PARENTS]]
-
     yacraf_instance = YacrafModel(attack_tree_roots, attack_events, defenses, abuse_cases, loss_events, attackers, actors)
 
     return yacraf_instance
