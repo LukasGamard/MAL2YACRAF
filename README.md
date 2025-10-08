@@ -1,6 +1,6 @@
 # Pipeline MAL-DSL => YACRAF-calculator
 
-This pipeline connects a threat model established following a MAL-DSL to a risk computaion tool, the YACRAF-calculator.
+This pipeline connects a threat model established following a MAL-DSL to a risk computaion tool, the [YACRAF-calculator](https://github.com/KTH-SSAS/EP2791-Cybersecurity-Threat-Modelling-and-Risk-Analysis/tree/master/YACRAF).
 
 The input to the pipeline is a YACRAF risk model in a json format. Here, `attack_graph.json` is given as an example. Its components `attack_steps` and `attackers` have been obtained by first instantiating a MAL-DSL with [mal-gui](https://github.com/mal-lang/mal-gui) (i.e. creating a threat model), and then compiling the threat model with the [mal-toolbox](https://github.com/mal-lang/mal-toolbox) into an attack graph. You can read more about this process in [mal-toolbox-tutorial](https://github.com/mal-lang/mal-toolbox-tutorial), and [mal-lang](https://github.com/mal-lang).
 Finally, `attack_graph.json` has been manually enriched to contain enough data in order to produce a YACRAF risk model. There is currently to our knowledge no other way of obtaining a risk model in a json format.
