@@ -44,6 +44,7 @@ def parse_json(filename: str) -> tuple[
         loss_events = {int(loss_event[String.ID]):LossEvent(loss_event) for name, loss_event in data[String.LOSS_EVENTS].items()}
         actors = {int(actor[String.ID]):Actor(actor) for name, actor in data[String.ACTORS].items()}
 
+    #logger.debug(f'Attack Events Parsed: {attack_events}')
     return attack_events, defenses, attackers, abuse_cases, loss_events, actors
 
 def file_to_yacraf_instance(filename: str) -> list:
@@ -53,7 +54,17 @@ def file_to_yacraf_instance(filename: str) -> list:
     """
 
     attack_events, defenses, attackers, abuse_cases, loss_events, actors = parse_json(filename)
-    attack_tree_roots = [attack_event for id, attack_event in attack_events.items() if not attack_event.data[String.PARENTS]]
+    #logger.debug(f'Parsed attack_events: {attack_events}')
+    root_ids = []
+    logger.debug(f"Abuse cases: {abuse_cases}")
+    for abuse_case in abuse_cases.values():
+        logger.debug(f"Processing abuse case id:{abuse_case.data[String.ID]} with attack steps: {abuse_case.data[String.ATTACK_STEPS]}")
+        for attack_step_id, attack_step_name in abuse_case.data[String.ATTACK_STEPS].items():
+            if attack_step_id not in root_ids:
+                root_ids.append(attack_step_id)
+    logger.debug(f'Identified root attack event IDs from abuse cases: {root_ids}')
+    attack_tree_roots = [attack_event for id, attack_event in attack_events.items() if str(id) in root_ids]
+    logger.debug(f'Attack tree roots: {[root.data[String.ID] for root in attack_tree_roots]}')
     yacraf_instance = YacrafModel(attack_tree_roots, attack_events, defenses, abuse_cases, loss_events, attackers, actors)
 
     return yacraf_instance

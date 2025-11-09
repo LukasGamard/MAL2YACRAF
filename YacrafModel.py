@@ -10,6 +10,8 @@ from views.configuration_view import ConfigurationView
 from blocks_gui.configuration.configuration_class_gui import GUIConfigurationClass
 from typing import Any, Iterable, Iterator
 from model import Model
+
+logger = logging.getLogger(__name__)
  
 
 class YacrafModel:
@@ -30,10 +32,17 @@ class YacrafModel:
         self.loss_events = loss_events
         self.attackers = attackers
         self.actors = actors
+        logger = logging.getLogger(__name__)
+
 
         ## Recursively build the attack trees, adding children AttackEvents
         # Build as a tree to shortcut loops in the attack graph
         self.attack_trees = [root.build_attack_tree(self.attack_events) for root in attack_tree_roots]
+        logger.debug(f"Built {len(self.attack_trees)} attack trees")
+        logger.debug(f"Attack trees details:{self.attack_trees}")
+        for attack_tree in self.attack_trees:
+            pass#logger.debug(f"Attack tree rooted at attack event id:{attack_tree.data[String.ID]}")
+
         
         ## Connect the remaining elements in the model
         # Attack_events get connected through defenses, abuse_cases and loss_events
@@ -69,6 +78,8 @@ class YacrafModel:
         logger.debug(f"Plotting {len(self.attack_trees)} attack trees")
         #setup_views_attack_tree : list[SetupView] = []
         for attack_tree in self.attack_trees:
+            logger.debug(f"Plotting attack tree rooted at attack event id:{attack_tree.id}")
+            logger.debug(f'Roots children: {attack_tree.children}')
             setup_view_attack_tree : SetupView = model.create_view(False, f"Attack Tree: {attack_tree.data[String.NAME]}")
             attack_tree.create_setup_class(setup_view_attack_tree, configuration_classes_gui, (0, 0))
         
@@ -170,9 +181,11 @@ class Node:
         self.id : int = data[String.ID]
         self.setup_class_gui : GUISetupClass
         self.grid_position : tuple[float, float]
+        #logger.debug(f"Created node id:{self.id} name:{self.data[String.NAME]}")
+        #logger.debug(f"Data: {data}")
 
     def __repr__(self):
-        return f"{self.__class__.__name__}:{self.data[String.ID]}"
+        return f"{self.__class__.__name__}:{self.data[String.NAME]}:{self.data[String.ID]}"
     
     def __str__(self):
         return f"id:{self.data[String.ID]}"
@@ -225,6 +238,7 @@ class AttackEvent(Node):
         Check if the attack event is valid.
         An attack event is valid if it respects YACRAF multiplicities.
         """
+        return True
         # The composition requirement doesn't induce a multiplicity constraint
         if len(self.ancestors) > 0:
             return True
@@ -238,15 +252,21 @@ class AttackEvent(Node):
 
     def build_attack_tree(self, attack_events : dict[int, AttackEvent], ancestors=None) -> AttackEvent:
         """recursive bottom-up process to pull and connect children attack_events"""
+        logger = logging.getLogger(__name__)
+        #logger.debug(f"Building attack tree for attack event id:{self.data[String.ID]}")
+        #logger.debug(f"Current ancestors: {ancestors}")
+        #logger.debug(f"Current children: {self.data[String.CHILDREN]}")
         self.ancestors : list = copy.deepcopy(ancestors) if ancestors else []
+        logger.debug(f"Processing children: {self.data[String.CHILDREN]} for parent id:{self.data[String.ID]}")
         for id, name in self.data[String.CHILDREN].items():
+            logger.debug(f"Processing child id:{id} name:{name} for parent id:{self.data[String.ID]}")
             if self.ancestors and int(id) in self.ancestors:
                 # avoid loops
                 return
-            ancestors = self.ancestors
-            ancestors.append(int(self.data[String.ID]))
-            self.children.append(attack_events[int(id)].build_attack_tree(attack_events, ancestors=ancestors))
+            self.ancestors.append(int(self.data[String.ID]))
+            self.children.append(attack_events[int(id)].build_attack_tree(attack_events, ancestors=self.ancestors))
 
+        logger.debug(f"Built attack tree for attack event id:{self.id} with children {self.children}")
         return self
     
     def __iter__(self):
@@ -267,10 +287,11 @@ class AttackEvent(Node):
         OUTPUT: next available position for the sub-tree on the same level
         """
         self.grid_position = position
+        logger = logging.getLogger(__name__)
 
         # Recursively build the tree "inorder", from the bottom up
         if full_attack_tree:
-
+            logger.debug(f"Children: {self.children} of parent {self.id}")
             if not self.children:
                 # Create a visual block representation
                 type = self.data[String.TYPE]
@@ -289,7 +310,8 @@ class AttackEvent(Node):
             
             # Plot children
             next_available_child_position = (position[0], position[1] + AttackEvent.height + Node.Padding.Y)
-            for child in self.children:   
+            for child in self.children:
+                logger.debug(f"Plotting child {child} of parent {self.data[String.NAME]}")
                 next_available_child_position = child.create_setup_class(setup_view, configuration_classes_gui, position=next_available_child_position)              
 
         # Create a visual block representation

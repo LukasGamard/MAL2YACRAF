@@ -29,28 +29,6 @@
             "type": "or",
             "local_difficulty": "1/3/5"
         },
-        "AIS:6:compromised": {
-            "asset": "AIS:6",
-            "children": {},
-            "id": 37,
-            "lang_graph_attack_step": "AIS:compromised",
-            "name": "compromised",
-            "parents": {},
-            "ttc": null,
-            "type": "or",
-            "local_difficulty": "1/2/7"
-        },
-        "AIS:6:dataManipulation": {
-            "asset": "AIS:6",
-            "children": {},
-            "id": 36,
-            "lang_graph_attack_step": "AIS:dataManipulation",
-            "name": "dataManipulation",
-            "parents": {},
-            "ttc": null,
-            "type": "or",
-            "local_difficulty": "1/3/5"
-        },
         "AIS:6:falseAISData": {
             "asset": "AIS:6",
             "children": {
@@ -659,7 +637,7 @@
                 "0": "Cyber pirate"
             },
             "attack_steps" : {
-                "19": "Vessel:2:incorrectFleetRouting"
+                "0": "GPS:0:gpsJamming"
             },
             "loss_events" : {
                 "1": "Port congestion"
@@ -705,8 +683,8 @@
             "id": 0,
             "type": "External",
             "loss_events": {
-                "0": "Delivery delays",
-                "1": "Grounded vessel"
+                "0": "Lost containers",
+                "1": "Port congestion"
             }
         },
         "Port operator": {
@@ -714,7 +692,7 @@
             "id": 1,
             "type": "External",
             "loss_events": {
-                "1": "Grounded vessel"
+                "1": "Port congestion"
             }
         }
     }
