@@ -1,0 +1,721 @@
+{
+    "attack_steps": {
+        "AIS:6:aisDataManipulation": {
+            "asset": "AIS:6",
+            "children": {
+                "34": "AIS:6:falseAISDataToVessel"
+            },
+            "id": 32,
+            "lang_graph_attack_step": "AIS:aisDataManipulation",
+            "name": "aisDataManipulation",
+            "parents": {
+                "30": "SystemFailure:5:softwareBug"
+            },
+            "ttc": null,
+            "type": "or",
+            "local_difficulty": "1/2/10"
+        },
+        "AIS:6:aisSpoofing": {
+            "asset": "AIS:6",
+            "children": {
+                "33": "AIS:6:falseAISDataToTrafficManagement",
+                "34": "AIS:6:falseAISDataToVessel"
+            },
+            "id": 31,
+            "lang_graph_attack_step": "AIS:aisSpoofing",
+            "name": "aisSpoofing",
+            "parents": {},
+            "ttc": null,
+            "type": "or",
+            "local_difficulty": "1/3/5"
+        },
+        "AIS:6:compromised": {
+            "asset": "AIS:6",
+            "children": {},
+            "id": 37,
+            "lang_graph_attack_step": "AIS:compromised",
+            "name": "compromised",
+            "parents": {},
+            "ttc": null,
+            "type": "or",
+            "local_difficulty": "1/2/7"
+        },
+        "AIS:6:dataManipulation": {
+            "asset": "AIS:6",
+            "children": {},
+            "id": 36,
+            "lang_graph_attack_step": "AIS:dataManipulation",
+            "name": "dataManipulation",
+            "parents": {},
+            "ttc": null,
+            "type": "or",
+            "local_difficulty": "1/3/5"
+        },
+        "AIS:6:falseAISData": {
+            "asset": "AIS:6",
+            "children": {
+                "14": "Vessel:2:falsePosition"
+            },
+            "id": 35,
+            "lang_graph_attack_step": "AIS:falseAISData",
+            "name": "falseAISData",
+            "parents": {},
+            "ttc": null,
+            "type": "or",
+            "local_difficulty": "1/3/7"
+        },
+        "AIS:6:falseAISDataToTrafficManagement": {
+            "asset": "AIS:6",
+            "children": {
+                "38": "TrafficManagement:7:falseVesselTracking",
+                "39": "TrafficManagement:7:incorrectFleetRouting"
+            },
+            "id": 33,
+            "lang_graph_attack_step": "AIS:falseAISDataToTrafficManagement",
+            "name": "falseAISDataToTrafficManagement",
+            "parents": {
+                "31": "AIS:6:aisSpoofing"
+            },
+            "ttc": null,
+            "type": "or",
+            "local_difficulty": "1/3/7"
+        },
+        "AIS:6:falseAISDataToVessel": {
+            "asset": "AIS:6",
+            "children": {
+                "13": "Vessel:2:collisionRisk",
+                "15": "Vessel:2:receivedFalseAIS"
+            },
+            "id": 34,
+            "lang_graph_attack_step": "AIS:falseAISDataToVessel",
+            "name": "falseAISDataToVessel",
+            "parents": {
+                "31": "AIS:6:aisSpoofing",
+                "32": "AIS:6:aisDataManipulation"
+            },
+            "ttc": null,
+            "type": "or",
+            "local_difficulty": "1/3/4"
+        },
+        "GPS:0:compromised": {
+            "asset": "GPS:0",
+            "children": {},
+            "id": 5,
+            "lang_graph_attack_step": "GPS:compromised",
+            "name": "compromised",
+            "parents": {},
+            "ttc": null,
+            "type": "or",
+            "local_difficulty": "1/2/5"
+        },
+        "GPS:0:failure": {
+            "asset": "GPS:0",
+            "children": {},
+            "id": 4,
+            "lang_graph_attack_step": "GPS:failure",
+            "name": "failure",
+            "parents": {},
+            "ttc": null,
+            "type": "or",
+            "local_difficulty": "1/3/7"
+        },
+        "GPS:0:gpsJamming": {
+            "asset": "GPS:0",
+            "children": {
+                "6": "INS:1:coordinatesDrifting"
+            },
+            "id": 0,
+            "lang_graph_attack_step": "GPS:gpsJamming",
+            "name": "gpsJamming",
+            "parents": {
+                "29": "SystemFailure:5:hardwareMalfunction"
+            },
+            "ttc": null,
+            "type": "or",
+            "local_difficulty": "1/2/3"
+        },
+        "GPS:0:gpsSpoofing": {
+            "asset": "GPS:0",
+            "children": {
+                "7": "INS:1:adjustmentToFalseCoordinates"
+            },
+            "id": 1,
+            "lang_graph_attack_step": "GPS:gpsSpoofing",
+            "name": "gpsSpoofing",
+            "parents": {},
+            "ttc": null,
+            "type": "or",
+            "local_difficulty": "1/2/3"
+        },
+        "GPS:0:signalEncryption": {
+            "asset": "GPS:0",
+            "children": {},
+            "id": 2,
+            "lang_graph_attack_step": "GPS:signalEncryption",
+            "name": "signalEncryption",
+            "parents": {},
+            "ttc": null,
+            "type": "defense",
+            "cost": 1000,
+            "impact": 7000
+        },
+        "GPS:0:spoofedData": {
+            "asset": "GPS:0",
+            "children": {},
+            "id": 3,
+            "lang_graph_attack_step": "GPS:spoofedData",
+            "name": "spoofedData",
+            "parents": {},
+            "ttc": null,
+            "type": "or",
+            "local_difficulty": "1/2/5"
+        },
+        "HumanError:3:delayedResponse": {
+            "asset": "HumanError:3",
+            "children": {
+                "13": "Vessel:2:collisionRisk"
+            },
+            "id": 21,
+            "lang_graph_attack_step": "HumanError:delayedResponse",
+            "name": "delayedResponse",
+            "parents": {},
+            "ttc": null,
+            "type": "or",
+            "local_difficulty": "1/2/10"
+        },
+        "HumanError:3:incorrectManualCorrection": {
+            "asset": "HumanError:3",
+            "children": {
+                "16": "Vessel:2:manualCorrection"
+            },
+            "id": 22,
+            "lang_graph_attack_step": "HumanError:incorrectManualCorrection",
+            "name": "incorrectManualCorrection",
+            "parents": {},
+            "ttc": null,
+            "type": "or",
+            "local_difficulty": "1/2/6"
+        },
+        "HumanError:3:misinterpretation": {
+            "asset": "HumanError:3",
+            "children": {
+                "12": "Vessel:2:routeDeviation"
+            },
+            "id": 20,
+            "lang_graph_attack_step": "HumanError:misinterpretation",
+            "name": "misinterpretation",
+            "parents": {},
+            "ttc": null,
+            "type": "or",
+            "local_difficulty": "1/2/8"
+        },
+        "HumanOperator:4:detectsCyberThreat": {
+            "asset": "HumanOperator:4",
+            "children": {
+                "16": "Vessel:2:manualCorrection"
+            },
+            "id": 23,
+            "lang_graph_attack_step": "HumanOperator:detectsCyberThreat",
+            "name": "detectsCyberThreat",
+            "parents": {},
+            "ttc": null,
+            "type": "or",
+            "local_difficulty": "1/2/9"
+        },
+        "HumanOperator:4:incorrectFleetRouting": {
+            "asset": "HumanOperator:4",
+            "children": {},
+            "id": 28,
+            "lang_graph_attack_step": "HumanOperator:incorrectFleetRouting",
+            "name": "incorrectFleetRouting",
+            "parents": {},
+            "ttc": null,
+            "type": "or",
+            "local_difficulty": "1/2/6"
+        },
+        "HumanOperator:4:incorrectManualCorrection": {
+            "asset": "HumanOperator:4",
+            "children": {
+                "12": "Vessel:2:routeDeviation"
+            },
+            "id": 25,
+            "lang_graph_attack_step": "HumanOperator:incorrectManualCorrection",
+            "name": "incorrectManualCorrection",
+            "parents": {},
+            "ttc": null,
+            "type": "or",
+            "local_difficulty": "1/2/10"
+        },
+        "HumanOperator:4:misinterpretsAIS": {
+            "asset": "HumanOperator:4",
+            "children": {
+                "12": "Vessel:2:routeDeviation"
+            },
+            "id": 26,
+            "lang_graph_attack_step": "HumanOperator:misinterpretsAIS",
+            "name": "misinterpretsAIS",
+            "parents": {},
+            "ttc": null,
+            "type": "or",
+            "local_difficulty": "1/2/8"
+        },
+        "HumanOperator:4:operationalDisruption": {
+            "asset": "HumanOperator:4",
+            "children": {},
+            "id": 27,
+            "lang_graph_attack_step": "HumanOperator:operationalDisruption",
+            "name": "operationalDisruption",
+            "parents": {},
+            "ttc": null,
+            "type": "or",
+            "local_difficulty": "1/2/3"
+        },
+        "HumanOperator:4:overridesNavigation": {
+            "asset": "HumanOperator:4",
+            "children": {
+                "16": "Vessel:2:manualCorrection"
+            },
+            "id": 24,
+            "lang_graph_attack_step": "HumanOperator:overridesNavigation",
+            "name": "overridesNavigation",
+            "parents": {},
+            "ttc": null,
+            "type": "or",
+            "local_difficulty": "1/2/3"
+        },
+        "INS:1:adjustmentToFalseCoordinates": {
+            "asset": "INS:1",
+            "children": {
+                "12": "Vessel:2:routeDeviation"
+            },
+            "id": 7,
+            "lang_graph_attack_step": "INS:adjustmentToFalseCoordinates",
+            "name": "adjustmentToFalseCoordinates",
+            "parents": {
+                "1": "GPS:0:gpsSpoofing"
+            },
+            "ttc": null,
+            "type": "or",
+            "local_difficulty": "1/3/5"
+        },
+        "INS:1:compromised": {
+            "asset": "INS:1",
+            "children": {},
+            "id": 10,
+            "lang_graph_attack_step": "INS:compromised",
+            "name": "compromised",
+            "parents": {},
+            "ttc": null,
+            "type": "or",
+            "local_difficulty": "1/2/10"
+        },
+        "INS:1:coordinatesDrifting": {
+            "asset": "INS:1",
+            "children": {
+                "11": "Vessel:2:routeLoss"
+            },
+            "id": 6,
+            "lang_graph_attack_step": "INS:coordinatesDrifting",
+            "name": "coordinatesDrifting",
+            "parents": {
+                "0": "GPS:0:gpsJamming"
+            },
+            "ttc": null,
+            "type": "or",
+            "local_difficulty": "1/2/3"
+        },
+        "INS:1:failure": {
+            "asset": "INS:1",
+            "children": {},
+            "id": 9,
+            "lang_graph_attack_step": "INS:failure",
+            "name": "failure",
+            "parents": {},
+            "ttc": null,
+            "type": "or",
+            "local_difficulty": "1/2/6"
+        },
+        "INS:1:spoofedData": {
+            "asset": "INS:1",
+            "children": {},
+            "id": 8,
+            "lang_graph_attack_step": "INS:spoofedData",
+            "name": "spoofedData",
+            "parents": {},
+            "ttc": null,
+            "type": "or",
+            "local_difficulty": "1/3/7"
+        },
+        "PortInfrastructure:8:incorrectFleetRouting": {
+            "asset": "PortInfrastructure:8",
+            "children": {},
+            "id": 44,
+            "lang_graph_attack_step": "PortInfrastructure:incorrectFleetRouting",
+            "name": "incorrectFleetRouting",
+            "parents": {},
+            "ttc": null,
+            "type": "or",
+            "local_difficulty": "1/2/5"
+        },
+        "PortInfrastructure:8:operationalDisruption": {
+            "asset": "PortInfrastructure:8",
+            "children": {},
+            "id": 43,
+            "lang_graph_attack_step": "PortInfrastructure:operationalDisruption",
+            "name": "operationalDisruption",
+            "parents": {
+                "40": "TrafficManagement:7:operationalDisruption"
+            },
+            "ttc": null,
+            "type": "or",
+            "local_difficulty": "1/3/5"
+        },
+        "SystemFailure:5:hardwareMalfunction": {
+            "asset": "SystemFailure:5",
+            "children": {
+                "0": "GPS:0:gpsJamming"
+            },
+            "id": 29,
+            "lang_graph_attack_step": "SystemFailure:hardwareMalfunction",
+            "name": "hardwareMalfunction",
+            "parents": {},
+            "ttc": null,
+            "type": "or",
+            "local_difficulty": "1/2/8"
+        },
+        "SystemFailure:5:softwareBug": {
+            "asset": "SystemFailure:5",
+            "children": {
+                "32": "AIS:6:aisDataManipulation"
+            },
+            "id": 30,
+            "lang_graph_attack_step": "SystemFailure:softwareBug",
+            "name": "softwareBug",
+            "parents": {},
+            "ttc": null,
+            "type": "or",
+            "local_difficulty": "1/2/6"
+        },
+        "TrafficManagement:7:compromised": {
+            "asset": "TrafficManagement:7",
+            "children": {},
+            "id": 42,
+            "lang_graph_attack_step": "TrafficManagement:compromised",
+            "name": "compromised",
+            "parents": {},
+            "ttc": null,
+            "type": "or",
+            "local_difficulty": "1/3/4"
+        },
+        "TrafficManagement:7:dataManipulation": {
+            "asset": "TrafficManagement:7",
+            "children": {},
+            "id": 41,
+            "lang_graph_attack_step": "TrafficManagement:dataManipulation",
+            "name": "dataManipulation",
+            "parents": {},
+            "ttc": null,
+            "type": "or",
+            "local_difficulty": "1/3/7"
+        },
+        "TrafficManagement:7:falseVesselTracking": {
+            "asset": "TrafficManagement:7",
+            "children": {
+                "39": "TrafficManagement:7:incorrectFleetRouting"
+            },
+            "id": 38,
+            "lang_graph_attack_step": "TrafficManagement:falseVesselTracking",
+            "name": "falseVesselTracking",
+            "parents": {
+                "33": "AIS:6:falseAISDataToTrafficManagement"
+            },
+            "ttc": null,
+            "type": "or",
+            "local_difficulty": "1/2/6"
+        },
+        "TrafficManagement:7:incorrectFleetRouting": {
+            "asset": "TrafficManagement:7",
+            "children": {
+                "12": "Vessel:2:routeDeviation"
+            },
+            "id": 39,
+            "lang_graph_attack_step": "TrafficManagement:incorrectFleetRouting",
+            "name": "incorrectFleetRouting",
+            "parents": {
+                "33": "AIS:6:falseAISDataToTrafficManagement",
+                "38": "TrafficManagement:7:falseVesselTracking"
+            },
+            "ttc": null,
+            "type": "or",
+            "local_difficulty": "1/2/9"
+        },
+        "TrafficManagement:7:operationalDisruption": {
+            "asset": "TrafficManagement:7",
+            "children": {
+                "43": "PortInfrastructure:8:operationalDisruption"
+            },
+            "id": 40,
+            "lang_graph_attack_step": "TrafficManagement:operationalDisruption",
+            "name": "operationalDisruption",
+            "parents": {},
+            "ttc": null,
+            "type": "or",
+            "local_difficulty": "1/2/8"
+        },
+        "Vessel:2:collisionRisk": {
+            "asset": "Vessel:2",
+            "children": {
+                "16": "Vessel:2:manualCorrection"
+            },
+            "id": 13,
+            "lang_graph_attack_step": "Vessel:collisionRisk",
+            "name": "collisionRisk",
+            "parents": {
+                "12": "Vessel:2:routeDeviation",
+                "14": "Vessel:2:falsePosition",
+                "15": "Vessel:2:receivedFalseAIS",
+                "21": "HumanError:3:delayedResponse",
+                "34": "AIS:6:falseAISDataToVessel"
+            },
+            "ttc": null,
+            "type": "or",
+            "local_difficulty": "1/2/5"
+        },
+        "Vessel:2:falsePosition": {
+            "asset": "Vessel:2",
+            "children": {
+                "13": "Vessel:2:collisionRisk",
+                "18": "Vessel:2:operationalDisruption"
+            },
+            "id": 14,
+            "lang_graph_attack_step": "Vessel:falsePosition",
+            "name": "falsePosition",
+            "parents": {
+                "15": "Vessel:2:receivedFalseAIS",
+                "35": "AIS:6:falseAISData"
+            },
+            "ttc": null,
+            "type": "or",
+            "local_difficulty": "1/2/8"
+        },
+        "Vessel:2:incorrectFleetRouting": {
+            "asset": "Vessel:2",
+            "children": {},
+            "id": 19,
+            "lang_graph_attack_step": "Vessel:incorrectFleetRouting",
+            "name": "incorrectFleetRouting",
+            "parents": {},
+            "ttc": null,
+            "type": "or",
+            "local_difficulty": "1/2/9"
+        },
+        "Vessel:2:manualCorrection": {
+            "asset": "Vessel:2",
+            "children": {
+                "12": "Vessel:2:routeDeviation"
+            },
+            "id": 16,
+            "lang_graph_attack_step": "Vessel:manualCorrection",
+            "name": "manualCorrection",
+            "parents": {
+                "13": "Vessel:2:collisionRisk",
+                "22": "HumanError:3:incorrectManualCorrection",
+                "23": "HumanOperator:4:detectsCyberThreat",
+                "24": "HumanOperator:4:overridesNavigation"
+            },
+            "ttc": null,
+            "type": "or",
+            "local_difficulty": "1/2/6"
+        },
+        "Vessel:2:operationalDisruption": {
+            "asset": "Vessel:2",
+            "children": {},
+            "id": 18,
+            "lang_graph_attack_step": "Vessel:operationalDisruption",
+            "name": "operationalDisruption",
+            "parents": {
+                "14": "Vessel:2:falsePosition"
+            },
+            "ttc": null,
+            "type": "or",
+            "local_difficulty": "1/2/8"
+        },
+        "Vessel:2:receivedFalseAIS": {
+            "asset": "Vessel:2",
+            "children": {
+                "13": "Vessel:2:collisionRisk",
+                "14": "Vessel:2:falsePosition"
+            },
+            "id": 15,
+            "lang_graph_attack_step": "Vessel:receivedFalseAIS",
+            "name": "receivedFalseAIS",
+            "parents": {
+                "34": "AIS:6:falseAISDataToVessel"
+            },
+            "ttc": null,
+            "type": "or",
+            "local_difficulty": "1/2/8"
+        },
+        "Vessel:2:routeDeviation": {
+            "asset": "Vessel:2",
+            "children": {
+                "13": "Vessel:2:collisionRisk"
+            },
+            "id": 12,
+            "lang_graph_attack_step": "Vessel:routeDeviation",
+            "name": "routeDeviation",
+            "parents": {
+                "7": "INS:1:adjustmentToFalseCoordinates",
+                "16": "Vessel:2:manualCorrection",
+                "20": "HumanError:3:misinterpretation",
+                "25": "HumanOperator:4:incorrectManualCorrection",
+                "26": "HumanOperator:4:misinterpretsAIS",
+                "39": "TrafficManagement:7:incorrectFleetRouting"
+            },
+            "ttc": null,
+            "type": "or",
+            "local_difficulty": "1/2/8"
+        },
+        "Vessel:2:routeLoss": {
+            "asset": "Vessel:2",
+            "children": {},
+            "id": 11,
+            "lang_graph_attack_step": "Vessel:routeLoss",
+            "name": "routeLoss",
+            "parents": {
+                "6": "INS:1:coordinatesDrifting"
+            },
+            "ttc": null,
+            "type": "or",
+            "local_difficulty": "1/2/5"
+        },
+        "Vessel:2:unexpectedWaitingTime": {
+            "asset": "Vessel:2",
+            "children": {},
+            "id": 17,
+            "lang_graph_attack_step": "Vessel:unexpectedWaitingTime",
+            "name": "unexpectedWaitingTime",
+            "parents": {},
+            "ttc": null,
+            "type": "or",
+            "local_difficulty": "1/3/7"
+        }
+    },
+    "attackers": {
+        "Cyber pirate": {
+            "id": 0,
+            "name": "Cyber pirate",
+            "entry_points": {
+                "0": "GPS:0:gpsJamming",
+                "19": "Vessel:2:incorrectFleetRouting"
+            },
+            "reached_attack_steps" : {
+                "0": "GPS:0:gpsJamming",
+                "19": "Vessel:2:incorrectFleetRouting"
+            },
+            "personal_risk_tolerance": 7,
+            "concern_for_collateral_damage": 3,
+            "skill": 6,
+            "resources": 3,
+            "sponsorship": 1,
+            "abuse_cases": {
+                "0": "Disrupt vessel navigation",
+                "1": "Perturbate port operations"
+            }
+        }
+    },
+    "abuse_cases": {
+        "Disrupt vessel navigation": {
+            "name": "Disrupt vessel navigation",
+            "id" : 0,
+            "accessibility_to_attack_surface": 4,
+            "window_of_opportunity": 5,
+            "ability_to_repudiate": 6,
+            "perceived_deterrence": 3,
+            "perceived_ease_of_attack": 7,
+            "perceived_benefit_of_success": 8,
+            "effort_spent": "2/5/9",
+            "attacker" : {
+                "0": "Cyber pirate"
+            },
+            "attack_steps" : {
+                "19": "Vessel:2:incorrectFleetRouting"
+            },
+            "loss_events" : {
+                "0": "Lost containers"
+            }
+        },
+        "Perturbate port call operations": {
+            "name": "Perturbate port operations",
+            "id": 1,
+            "accessibility_to_attack_surface": 5,
+            "window_of_opportunity": 4,
+            "ability_to_repudiate": 5,
+            "perceived_deterrence": 4,
+            "perceived_ease_of_attack": 6,
+            "perceived_benefit_of_success": 7,
+            "effort_spent": "3/6/8",
+            "attacker" : {
+                "0": "Cyber pirate"
+            },
+            "attack_steps" : {
+                "19": "Vessel:2:incorrectFleetRouting"
+            },
+            "loss_events" : {
+                "1": "Port congestion"
+            }
+        }   
+    },
+    "loss_events": {
+        "Lost containers": {
+            "name": "Lost containers",
+            "id": 0,
+            "type": "Financial",
+            "magnitude" : "10/30/60",
+            "attack_steps" : {
+                "19": "Vessel:2:incorrectFleetRouting"
+            },
+            "actor" : {
+                "0": "Cargo owner"
+            },
+            "abuse_cases" : {
+                "0": "Disrupt vessel navigation"
+            }
+        },
+        "Port congestion": {
+            "name": "Port congestion",
+            "id": 1,
+            "type" :"Productivity",
+            "magnitude" : "15/40/70",
+            "attack_steps" : {
+                "19": "Vessel:2:incorrectFleetRouting"
+            },
+            "actor" : {
+                "0": "Cargo owner",
+                "1": "Port operator"
+            },
+            "abuse_cases" : {
+                "1": "Perturbate port call operations"
+            }
+        }
+    },
+    "actors": {
+        "Cargo owner": {
+            "name": "Cargo owner",
+            "id": 0,
+            "type": "External",
+            "loss_events": {
+                "0": "Delivery delays",
+                "1": "Grounded vessel"
+            }
+        },
+        "Port operator": {
+            "name": "Port operator",
+            "id": 1,
+            "type": "External",
+            "loss_events": {
+                "1": "Grounded vessel"
+            }
+        }
+    }
+}
